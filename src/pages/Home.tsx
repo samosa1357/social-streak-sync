@@ -67,12 +67,22 @@ export default function Home() {
         {habits.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-muted-foreground mb-4">Start building your habits!</p>
-            <AddHabitDialog onAddHabit={addHabit} />
+            <AddHabitDialog 
+              onAddHabit={addHabit}
+              onEditHabit={editHabit}
+              editingHabit={editingHabit}
+              onEditComplete={() => setEditingHabit(null)}
+            />
           </div>
         ) : (
           <div className="flex justify-center pt-4">
             {canAddMore ? (
-              <AddHabitDialog onAddHabit={addHabit} />
+              <AddHabitDialog 
+                onAddHabit={addHabit}
+                onEditHabit={editHabit}
+                editingHabit={editingHabit}
+                onEditComplete={() => setEditingHabit(null)}
+              />
             ) : (
               <div className="text-center">
                 <p className="text-sm text-muted-foreground mb-2">
@@ -85,14 +95,6 @@ export default function Home() {
             )}
           </div>
         )}
-
-        {/* Edit Habit Dialog */}
-        <AddHabitDialog
-          onAddHabit={addHabit}
-          onEditHabit={editHabit}
-          editingHabit={editingHabit}
-          onEditComplete={() => setEditingHabit(null)}
-        />
       </div>
     </div>
   );
