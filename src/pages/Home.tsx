@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { DailyOverview } from '@/components/DailyOverview';
 import { HabitCard } from '@/components/HabitCard';
 import { AddHabitDialog } from '@/components/AddHabitDialog';
 import { useHabits } from '@/hooks/useHabits';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { Habit } from '@/types/habit';
 
 export default function Home() {
-  const { habits, addHabit, updateHabitProgress, toggleHabitComplete, deleteHabit, getTodayProgress } = useHabits();
+  const { habits, addHabit, updateHabitProgress, decrementHabitProgress, toggleHabitComplete, editHabit, deleteHabit, getTodayProgress } = useHabits();
+  const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [userLevel] = useLocalStorage('zentrack-user-level', 1);
   const [totalStreakDays] = useLocalStorage('zentrack-total-streak', 0);
   
@@ -55,6 +57,8 @@ export default function Home() {
               onToggle={toggleHabitComplete}
               onDelete={deleteHabit}
               onIncrement={updateHabitProgress}
+              onDecrement={decrementHabitProgress}
+              onEdit={setEditingHabit}
             />
           ))}
         </div>
@@ -81,6 +85,14 @@ export default function Home() {
             )}
           </div>
         )}
+
+        {/* Edit Habit Dialog */}
+        <AddHabitDialog
+          onAddHabit={addHabit}
+          onEditHabit={editHabit}
+          editingHabit={editingHabit}
+          onEditComplete={() => setEditingHabit(null)}
+        />
       </div>
     </div>
   );

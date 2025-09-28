@@ -45,8 +45,21 @@ export function useHabits() {
 
   const calculateDailyProgress = (): DailyProgress => {
     const totalHabits = habits.length;
+    if (totalHabits === 0) {
+      return {
+        date: new Date().toDateString(),
+        completionPercentage: 0,
+        totalHabits: 0,
+        completedHabits: 0,
+        allCompleted: false,
+      };
+    }
+
+    // Calculate total possible points and achieved points
+    const totalPossiblePoints = habits.reduce((sum, habit) => sum + habit.targetCount, 0);
+    const achievedPoints = habits.reduce((sum, habit) => sum + habit.currentCount, 0);
+    const completionPercentage = Math.round((achievedPoints / totalPossiblePoints) * 100);
     const completedHabits = habits.filter(h => h.completed).length;
-    const completionPercentage = totalHabits > 0 ? Math.round((completedHabits / totalHabits) * 100) : 0;
     
     return {
       date: new Date().toDateString(),
@@ -100,6 +113,36 @@ export function useHabits() {
     }));
   };
 
+  const decrementHabitProgress = (id: string) => {
+    setHabits(prev => prev.map(habit => {
+      if (habit.id === id && habit.currentCount > 0) {
+        const newCount = habit.currentCount - 1;
+        return {
+          ...habit,
+          currentCount: newCount,
+          completed: newCount >= habit.targetCount,
+        };
+      }
+      return habit;
+    }));
+  };
+
+  const editHabit = (id: string, name: string, targetCount: number) => {
+    setHabits(prev => prev.map(habit => {
+      if (habit.id === id) {
+        const newCurrentCount = Math.min(habit.currentCount, targetCount);
+        return {
+          ...habit,
+          name,
+          targetCount,
+          currentCount: newCurrentCount,
+          completed: newCurrentCount >= targetCount,
+        };
+      }
+      return habit;
+    }));
+  };
+
   const deleteHabit = (id: string) => {
     setHabits(prev => prev.filter(habit => habit.id !== id));
   };
@@ -118,7 +161,9 @@ export function useHabits() {
     habits,
     addHabit,
     updateHabitProgress,
+    decrementHabitProgress,
     toggleHabitComplete,
+    editHabit,
     deleteHabit,
     getTodayProgress,
     getRecentProgress,

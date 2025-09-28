@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle2, Circle, Trash2 } from 'lucide-react';
+import { CheckCircle2, Circle, Trash2, Edit, Plus, Minus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -10,9 +10,11 @@ interface HabitCardProps {
   onToggle: (id: string) => void;
   onDelete: (id: string) => void;
   onIncrement?: (id: string) => void;
+  onDecrement?: (id: string) => void;
+  onEdit?: (habit: Habit) => void;
 }
 
-export function HabitCard({ habit, onToggle, onDelete, onIncrement }: HabitCardProps) {
+export function HabitCard({ habit, onToggle, onDelete, onIncrement, onDecrement, onEdit }: HabitCardProps) {
   const progressPercentage = (habit.currentCount / habit.targetCount) * 100;
   
   return (
@@ -49,19 +51,29 @@ export function HabitCard({ habit, onToggle, onDelete, onIncrement }: HabitCardP
             <div className="flex items-center space-x-2 mt-1">
               {habit.targetCount > 1 && (
                 <div className="flex items-center space-x-1">
-                  {onIncrement && !habit.completed && (
+                  {onDecrement && !habit.completed && habit.currentCount > 0 && (
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => onIncrement(habit.id)}
-                      className="h-6 px-2 text-xs"
+                      onClick={() => onDecrement(habit.id)}
+                      className="h-6 w-6 p-0 text-xs"
                     >
-                      +1
+                      <Minus className="h-3 w-3" />
                     </Button>
                   )}
                   <span className="text-sm text-muted-foreground">
                     {habit.currentCount}/{habit.targetCount}
                   </span>
+                  {onIncrement && !habit.completed && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onIncrement(habit.id)}
+                      className="h-6 w-6 p-0 text-xs"
+                    >
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  )}
                 </div>
               )}
               
@@ -83,14 +95,26 @@ export function HabitCard({ habit, onToggle, onDelete, onIncrement }: HabitCardP
           </div>
         </div>
         
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => onDelete(habit.id)}
-          className="p-1 h-8 w-8 text-destructive hover:text-destructive"
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
+        <div className="flex space-x-1">
+          {onEdit && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onEdit(habit)}
+              className="p-1 h-8 w-8 text-muted-foreground hover:text-foreground"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onDelete(habit.id)}
+            className="p-1 h-8 w-8 text-destructive hover:text-destructive"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     </Card>
   );
