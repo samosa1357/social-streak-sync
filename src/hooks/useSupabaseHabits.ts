@@ -1,0 +1,418 @@
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from './useAuth';
+import { useToast } from '@/hooks/use-toast';
+import { Habit } from '@/types/habit';
+
+export function useSupabaseHabits() {
+  const [habits, setHabits] = useState<Habit[]>([]);
+  const [dailyProgress, setDailyProgress] = useState<Record<string, number>>({});
+  const [userLevel, setUserLevel] = useState(1);
+  const [totalStreakDays, setTotalStreakDays] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const { user, isAuthenticated } = useAuth();
+  const { toast } = useToast();
+
+  const fetchHabits = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('habits')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      const formattedHabits: Habit[] = (data || []).map(habit => ({
+        id: habit.id,
+        name: habit.name,
+        targetCount: habit.target_count,
+        currentCount: 0,
+        completed: false,
+        streak: 0,
+        longestStreak: 0,
+        createdAt: habit.created_at
+      }));
+
+      setHabits(formattedHabits);
+    } catch (error) {
+      console.error('Error fetching habits:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load habits. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const fetchDailyProgress = async () => {
+    if (!user) return;
+
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const { data, error } = await supabase
+        .from('daily_progress')
+        .select('data')
+        .eq('user_id', user.id)
+        .eq('date', today)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+
+      const progressData = data?.data;
+      if (progressData && typeof progressData === 'object' && !Array.isArray(progressData)) {
+        setDailyProgress(progressData as Record<string, number>);
+      } else {
+        setDailyProgress({});
+      }
+    } catch (error) {
+      console.error('Error fetching daily progress:', error);
+    }
+  };
+
+  const fetchUserProgress = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('user_progress')
+        .select('level, total_streak_days')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        // Create user progress if it doesn't exist
+        const { error: insertError } = await supabase
+          .from('user_progress')
+          .insert({
+            user_id: user.id,
+            level: 1,
+            total_streak_days: 0
+          });
+
+        if (insertError) throw insertError;
+        setUserLevel(1);
+        setTotalStreakDays(0);
+      } else if (data) {
+        setUserLevel(data.level);
+        setTotalStreakDays(data.total_streak_days);
+      }
+    } catch (error) {
+      console.error('Error fetching user progress:', error);
+    }
+  };
+
+  const addHabit = async (name: string, targetCount: number) => {
+    if (!user || habits.length >= 7) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('habits')
+        .insert({
+          user_id: user.id,
+          name,
+          target_count: targetCount
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const newHabit: Habit = {
+        id: data.id,
+        name: data.name,
+        targetCount: data.target_count,
+        currentCount: 0,
+        completed: false,
+        streak: 0,
+        longestStreak: 0,
+        createdAt: data.created_at
+      };
+
+      setHabits(prev => [...prev, newHabit]);
+      
+      toast({
+        title: 'Habit added!',
+        description: `"${name}" has been added to your habits.`,
+      });
+    } catch (error) {
+      console.error('Error adding habit:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to add habit. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const editHabit = async (id: string, name: string, targetCount: number) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('habits')
+        .update({ name, target_count: targetCount })
+        .eq('id', id)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      setHabits(prev => prev.map(habit => 
+        habit.id === id 
+          ? { ...habit, name, targetCount }
+          : habit
+      ));
+
+      toast({
+        title: 'Habit updated!',
+        description: 'Your habit has been updated successfully.',
+      });
+    } catch (error) {
+      console.error('Error editing habit:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update habit. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const deleteHabit = async (id: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('habits')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      setHabits(prev => prev.filter(habit => habit.id !== id));
+      setDailyProgress(prev => {
+        const newProgress = { ...prev };
+        delete newProgress[id];
+        return newProgress;
+      });
+
+      toast({
+        title: 'Habit deleted',
+        description: 'The habit has been removed from your list.',
+      });
+    } catch (error) {
+      console.error('Error deleting habit:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete habit. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const updateHabitProgress = async (id: string) => {
+    if (!user) return;
+
+    const habit = habits.find(h => h.id === id);
+    if (!habit) return;
+
+    const currentProgress = dailyProgress[id] || 0;
+    if (currentProgress >= habit.targetCount) return;
+
+    const newProgress = currentProgress + 1;
+    const updatedDailyProgress = { ...dailyProgress, [id]: newProgress };
+
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      const { error } = await supabase
+        .from('daily_progress')
+        .upsert({
+          user_id: user.id,
+          date: today,
+          data: updatedDailyProgress
+        });
+
+      if (error) throw error;
+
+      setDailyProgress(updatedDailyProgress);
+      
+      // Update local habit state
+      setHabits(prev => prev.map(h => 
+        h.id === id 
+          ? { 
+              ...h, 
+              currentCount: newProgress,
+              completed: newProgress >= h.targetCount
+            }
+          : h
+      ));
+    } catch (error) {
+      console.error('Error updating habit progress:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update progress. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const decrementHabitProgress = async (id: string) => {
+    if (!user) return;
+
+    const currentProgress = dailyProgress[id] || 0;
+    if (currentProgress <= 0) return;
+
+    const newProgress = currentProgress - 1;
+    const updatedDailyProgress = { ...dailyProgress, [id]: newProgress };
+
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      const { error } = await supabase
+        .from('daily_progress')
+        .upsert({
+          user_id: user.id,
+          date: today,
+          data: updatedDailyProgress
+        });
+
+      if (error) throw error;
+
+      setDailyProgress(updatedDailyProgress);
+      
+      // Update local habit state
+      setHabits(prev => prev.map(h => 
+        h.id === id 
+          ? { 
+              ...h, 
+              currentCount: newProgress,
+              completed: newProgress >= h.targetCount
+            }
+          : h
+      ));
+    } catch (error) {
+      console.error('Error updating habit progress:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update progress. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const toggleHabitComplete = async (id: string) => {
+    const habit = habits.find(h => h.id === id);
+    if (!habit) return;
+
+    const currentProgress = dailyProgress[id] || 0;
+    const newProgress = currentProgress >= habit.targetCount ? 0 : habit.targetCount;
+    const updatedDailyProgress = { ...dailyProgress, [id]: newProgress };
+
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      const { error } = await supabase
+        .from('daily_progress')
+        .upsert({
+          user_id: user.id,
+          date: today,
+          data: updatedDailyProgress
+        });
+
+      if (error) throw error;
+
+      setDailyProgress(updatedDailyProgress);
+      
+      // Update local habit state
+      setHabits(prev => prev.map(h => 
+        h.id === id 
+          ? { 
+              ...h, 
+              currentCount: newProgress,
+              completed: newProgress >= h.targetCount
+            }
+          : h
+      ));
+    } catch (error) {
+      console.error('Error toggling habit completion:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update habit. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const getTodayProgress = () => {
+    if (habits.length === 0) return { percentage: 0, completedHabits: 0, totalHabits: 0, completedTasks: 0, totalTasks: 0 };
+
+    let totalTasks = 0;
+    let completedTasks = 0;
+    let completedHabits = 0;
+
+    habits.forEach(habit => {
+      const progress = dailyProgress[habit.id] || 0;
+      totalTasks += habit.targetCount;
+      completedTasks += progress;
+      if (progress >= habit.targetCount) {
+        completedHabits++;
+      }
+    });
+
+    const percentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+    return {
+      percentage,
+      completedHabits,
+      totalHabits: habits.length,
+      completedTasks,
+      totalTasks
+    };
+  };
+
+  // Update habits with current progress when dailyProgress changes
+  useEffect(() => {
+    setHabits(prev => prev.map(habit => ({
+      ...habit,
+      currentCount: dailyProgress[habit.id] || 0,
+      completed: (dailyProgress[habit.id] || 0) >= habit.targetCount
+    })));
+  }, [dailyProgress]);
+
+  // Load data when user changes
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      setLoading(true);
+      Promise.all([
+        fetchHabits(),
+        fetchDailyProgress(),
+        fetchUserProgress()
+      ]).finally(() => {
+        setLoading(false);
+      });
+    } else {
+      setHabits([]);
+      setDailyProgress({});
+      setUserLevel(1);
+      setTotalStreakDays(0);
+      setLoading(false);
+    }
+  }, [isAuthenticated, user]);
+
+  return {
+    habits,
+    addHabit,
+    editHabit,
+    deleteHabit,
+    updateHabitProgress,
+    decrementHabitProgress,
+    toggleHabitComplete,
+    getTodayProgress,
+    userLevel,
+    totalStreakDays,
+    loading
+  };
+}

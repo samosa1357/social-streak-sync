@@ -1,16 +1,34 @@
 import React from 'react';
-import { User, Settings, Moon, Sun, Star, Users } from 'lucide-react';
+import { User, Settings, Moon, Sun, Star, Users, LogOut } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { useHabits } from '@/hooks/useHabits';
+import { useSupabaseHabits } from '@/hooks/useSupabaseHabits';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 
 export default function Profile() {
-  const [userLevel] = useLocalStorage('zentrack-user-level', 1);
-  const [totalStreakDays] = useLocalStorage('zentrack-total-streak', 0);
   const [darkMode, setDarkMode] = useLocalStorage('zentrack-dark-mode', false);
-  const { habits } = useHabits();
+  const { habits, userLevel, totalStreakDays } = useSupabaseHabits();
+  const { signOut, user } = useAuth();
+  const { toast } = useToast();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast({
+        title: 'Signed out',
+        description: 'You have been signed out successfully.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to sign out. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
@@ -79,6 +97,23 @@ export default function Profile() {
                 {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </Button>
             </div>
+            
+            {user && (
+              <div className="pt-2 border-t">
+                <div className="text-sm text-muted-foreground mb-2">
+                  Signed in as: {user.email}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSignOut}
+                  className="transition-smooth text-destructive hover:text-destructive"
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign Out
+                </Button>
+              </div>
+            )}
           </div>
         </Card>
 

@@ -2,17 +2,32 @@ import React, { useState } from 'react';
 import { DailyOverview } from '@/components/DailyOverview';
 import { HabitCard } from '@/components/HabitCard';
 import { AddHabitDialog } from '@/components/AddHabitDialog';
-import { useHabits } from '@/hooks/useHabits';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useSupabaseHabits } from '@/hooks/useSupabaseHabits';
 import { Habit } from '@/types/habit';
 
 export default function Home() {
-  const { habits, addHabit, updateHabitProgress, decrementHabitProgress, toggleHabitComplete, editHabit, deleteHabit, getTodayProgress } = useHabits();
+  const { habits, addHabit, updateHabitProgress, decrementHabitProgress, toggleHabitComplete, editHabit, deleteHabit, getTodayProgress, userLevel, totalStreakDays, loading } = useSupabaseHabits();
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
-  const [userLevel] = useLocalStorage('zentrack-user-level', 1);
-  const [totalStreakDays] = useLocalStorage('zentrack-total-streak', 0);
   
-  const todayProgress = getTodayProgress();
+  if (loading) {
+    return (
+      <div className="min-h-screen p-4 pb-20 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading your habits...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  const todayProgressData = getTodayProgress();
+  const todayProgress = {
+    date: new Date().toISOString().split('T')[0],
+    completionPercentage: todayProgressData.percentage,
+    totalHabits: todayProgressData.totalHabits,
+    completedHabits: todayProgressData.completedHabits,
+    allCompleted: todayProgressData.completedHabits === todayProgressData.totalHabits && todayProgressData.totalHabits > 0
+  };
   
   // Sort habits: incomplete first, then completed
   const sortedHabits = [...habits].sort((a, b) => {
