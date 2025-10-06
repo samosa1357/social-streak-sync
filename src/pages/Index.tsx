@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import Home from './Home';
 import History from './History';
+import Friends from './Friends';
 import Profile from './Profile';
 import { useAuth } from '@/hooks/useAuth';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
@@ -37,6 +38,8 @@ const Index = () => {
         return <Home />;
       case 'history':
         return <History />;
+      case 'friends':
+        return <Friends />;
       case 'profile':
         return <Profile />;
       default:

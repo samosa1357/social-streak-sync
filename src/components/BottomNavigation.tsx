@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, BarChart3, User } from 'lucide-react';
+import { Home, BarChart3, Users, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface BottomNavigationProps {
@@ -11,6 +11,7 @@ export function BottomNavigation({ activeTab, onTabChange }: BottomNavigationPro
   const tabs = [
     { id: 'home', label: 'Home', icon: Home },
     { id: 'history', label: 'History', icon: BarChart3 },
+    { id: 'friends', label: 'Friends', icon: Users },
     { id: 'profile', label: 'Profile', icon: User },
   ];
 
