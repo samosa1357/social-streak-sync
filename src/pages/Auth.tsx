@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -6,19 +7,28 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import { z } from 'zod';
 
 const emailSchema = z.string().email('Please enter a valid email address');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
 
 export default function Auth() {
+  const navigate = useNavigate();
+  const { isAuthenticated, loading } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (!loading && isAuthenticated) {
+      navigate('/', { replace: true });
+    }
+  }, [isAuthenticated, loading, navigate]);
 
   const validateForm = () => {
     const newErrors: { email?: string; password?: string } = {};
@@ -78,6 +88,7 @@ export default function Auth() {
           title: 'Welcome to ZenTrack!',
           description: 'Your account has been created successfully.',
         });
+        navigate('/', { replace: true });
       }
     } catch (error) {
       toast({
@@ -120,6 +131,7 @@ export default function Auth() {
           title: 'Welcome back!',
           description: 'You have been signed in successfully.',
         });
+        navigate('/', { replace: true });
       }
     } catch (error) {
       toast({
