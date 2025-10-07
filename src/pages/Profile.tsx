@@ -179,22 +179,6 @@ export default function Profile() {
           </div>
         </Card>
 
-        {/* Social Features (Preview) */}
-        <Card className="p-4 gradient-card border-0 shadow-soft">
-          <h3 className="font-semibold mb-4 flex items-center">
-            <Users className="h-5 w-5 mr-2" />
-            Social Features
-          </h3>
-          
-          <div className="text-center py-4">
-            <p className="text-sm text-muted-foreground mb-4">
-              Connect with friends and share your progress!
-            </p>
-            <Button variant="outline" className="transition-smooth" disabled>
-              Connect with Supabase to enable
-            </Button>
-          </div>
-        </Card>
 
         {/* Premium Upgrade */}
         <Card className="p-4 gradient-secondary border-0 shadow-medium">
