@@ -57,9 +57,9 @@ export function useSupabaseHabits() {
         .select('data')
         .eq('user_id', user.id)
         .eq('date', today)
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') throw error;
+      if (error) throw error;
 
       const progressData = data?.data;
       if (progressData && typeof progressData === 'object' && !Array.isArray(progressData)) {
@@ -69,6 +69,7 @@ export function useSupabaseHabits() {
       }
     } catch (error) {
       console.error('Error fetching daily progress:', error);
+      setDailyProgress({});
     }
   };
 
@@ -80,9 +81,11 @@ export function useSupabaseHabits() {
         .from('user_progress')
         .select('level, total_streak_days')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) throw error;
+
+      if (!data) {
         // Create user progress if it doesn't exist
         const { error: insertError } = await supabase
           .from('user_progress')
@@ -95,12 +98,14 @@ export function useSupabaseHabits() {
         if (insertError) throw insertError;
         setUserLevel(1);
         setTotalStreakDays(0);
-      } else if (data) {
+      } else {
         setUserLevel(data.level);
         setTotalStreakDays(data.total_streak_days);
       }
     } catch (error) {
       console.error('Error fetching user progress:', error);
+      setUserLevel(1);
+      setTotalStreakDays(0);
     }
   };
 
