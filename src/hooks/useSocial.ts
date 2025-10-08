@@ -184,13 +184,17 @@ export function useSocial() {
     try {
       const { error } = await supabase
         .from('follows')
-        .insert({ follower_id: user.id, following_id: followingId });
+        .insert({
+          follower_id: user.id,
+          following_id: followingId,
+          status: 'pending'
+        });
 
       if (error) throw error;
 
       toast({
-        title: 'Success',
-        description: 'You are now following this user.',
+        title: 'Follow request sent!',
+        description: 'Waiting for the user to accept your request.',
       });
 
       await Promise.all([fetchFollowing(), fetchUserStats()]);

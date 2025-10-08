@@ -2,16 +2,9 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToast } from '@/hooks/use-toast';
+import type { Tables } from '@/integrations/supabase/types';
 
-export interface Notification {
-  id: string;
-  type: string;
-  title: string;
-  message: string;
-  read: boolean;
-  data?: any;
-  created_at: string;
-}
+export type Notification = Tables<'notifications'>;
 
 export function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -33,7 +26,7 @@ export function useNotifications() {
       if (error) throw error;
 
       setNotifications(data || []);
-      setUnreadCount((data || []).filter(n => !n.read).length);
+      setUnreadCount((data || []).filter(n => n.read === false).length);
     } catch (error) {
       console.error('Error fetching notifications:', error);
     } finally {

@@ -91,9 +91,10 @@ export default function Notifications() {
                       <div className="flex gap-2 mt-4">
                         <Button
                           size="sm"
-                          onClick={() =>
-                            handleFollowRequest(notification.id, notification.data.follow_id, true)
-                          }
+                          onClick={() => {
+                            const data = notification.data as { follow_id: string };
+                            handleFollowRequest(notification.id, data.follow_id, true);
+                          }}
                           className="gap-2"
                         >
                           <Check className="h-4 w-4" />
@@ -102,9 +103,10 @@ export default function Notifications() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() =>
-                            handleFollowRequest(notification.id, notification.data.follow_id, false)
-                          }
+                          onClick={() => {
+                            const data = notification.data as { follow_id: string };
+                            handleFollowRequest(notification.id, data.follow_id, false);
+                          }}
                           className="gap-2"
                         >
                           <X className="h-4 w-4" />

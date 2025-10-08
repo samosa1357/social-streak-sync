@@ -1,15 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
-import { BottomNavigation } from '@/components/BottomNavigation';
 import Home from './Home';
-import History from './History';
-import Friends from './Friends';
-import Profile from './Profile';
 import { useAuth } from '@/hooks/useAuth';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 
 const Index = () => {
-  const [activeTab, setActiveTab] = useState('home');
   const [darkMode] = useLocalStorage('zentrack-dark-mode', false);
   const { isAuthenticated, loading } = useAuth();
 
@@ -32,27 +27,7 @@ const Index = () => {
     return <Navigate to="/auth" replace />;
   }
 
-  const renderActiveTab = () => {
-    switch (activeTab) {
-      case 'home':
-        return <Home />;
-      case 'history':
-        return <History />;
-      case 'friends':
-        return <Friends />;
-      case 'profile':
-        return <Profile />;
-      default:
-        return <Home />;
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-background">
-      {renderActiveTab()}
-      <BottomNavigation activeTab={activeTab} onTabChange={setActiveTab} />
-    </div>
-  );
+  return <Home />;
 };
 
 export default Index;
