@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useNotifications } from '@/hooks/useNotifications';
 import { formatDistanceToNow } from 'date-fns';
+import { BottomNavigation } from '@/components/BottomNavigation';
 
 export default function Notifications() {
   const {
@@ -142,6 +143,7 @@ export default function Notifications() {
           </div>
         )}
       </div>
+      <BottomNavigation />
     </div>
   );
 }

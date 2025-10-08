@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useSocial } from '@/hooks/useSocial';
 import { supabase } from '@/integrations/supabase/client';
+import { BottomNavigation } from '@/components/BottomNavigation';
 
 export default function Profile() {
   const [darkMode, setDarkMode] = useLocalStorage('zentrack-dark-mode', false);
@@ -284,6 +285,7 @@ export default function Profile() {
           </div>
         </Card>
       </div>
+      <BottomNavigation />
     </div>
   );
 }

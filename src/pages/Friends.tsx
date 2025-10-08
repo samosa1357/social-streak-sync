@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useSocial } from '@/hooks/useSocial';
 import { Progress } from '@/components/ui/progress';
+import { BottomNavigation } from '@/components/BottomNavigation';
 
 export default function Friends() {
   const { userStats, following, friendsProgress, loading, unfollowUser, searchUsers, followUser } = useSocial();
@@ -174,6 +175,7 @@ export default function Friends() {
           </Card>
         )}
       </div>
+      <BottomNavigation />
     </div>
   );
 }

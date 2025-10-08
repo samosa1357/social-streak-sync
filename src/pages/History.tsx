@@ -2,6 +2,7 @@ import React from 'react';
 import { Calendar, TrendingUp, Award } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { useHabits } from '@/hooks/useHabits';
+import { BottomNavigation } from '@/components/BottomNavigation';
 
 export default function History() {
   const { habits, getRecentProgress } = useHabits();
@@ -120,6 +121,7 @@ export default function History() {
           </Card>
         )}
       </div>
+      <BottomNavigation />
     </div>
   );
 }
