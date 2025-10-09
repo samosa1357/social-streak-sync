@@ -32,11 +32,6 @@ export function BottomNavigation() {
             >
               <div className="relative">
                 <Icon className={`h-6 w-6 ${isActive ? 'scale-110' : ''}`} />
-                {badge && badge > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
-                    {badge > 99 ? '99+' : badge}
-                  </span>
-                )}
               </div>
               <span className="text-xs font-medium">{label}</span>
             </Link>

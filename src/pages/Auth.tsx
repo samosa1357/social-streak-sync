@@ -11,8 +11,15 @@ import { useAuth } from '@/hooks/useAuth';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import { z } from 'zod';
 
-const emailSchema = z.string().email('Please enter a valid email address');
-const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
+const authSchema = z.object({
+  email: z.string()
+    .min(1, 'Email is required')
+    .email('Please enter a valid email address')
+    .max(255, 'Email must be less than 255 characters'),
+  password: z.string()
+    .min(6, 'Password must be at least 6 characters')
+    .max(128, 'Password must be less than 128 characters')
+});
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -34,18 +41,16 @@ export default function Auth() {
     const newErrors: { email?: string; password?: string } = {};
     
     try {
-      emailSchema.parse(email);
+      authSchema.parse({ email: email.trim(), password });
     } catch (error) {
       if (error instanceof z.ZodError) {
-        newErrors.email = error.errors[0].message;
-      }
-    }
-
-    try {
-      passwordSchema.parse(password);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        newErrors.password = error.errors[0].message;
+        error.errors.forEach((err) => {
+          if (err.path[0] === 'email') {
+            newErrors.email = err.message;
+          } else if (err.path[0] === 'password') {
+            newErrors.password = err.message;
+          }
+        });
       }
     }
 
@@ -177,8 +182,11 @@ export default function Auth() {
                         type="email"
                         placeholder="Enter your email"
                         value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="pl-10 transition-smooth"
+                        onChange={(e) => {
+                          setEmail(e.target.value);
+                          if (errors.email) setErrors({ ...errors, email: undefined });
+                        }}
+                        className={`pl-10 transition-smooth ${errors.email ? 'border-destructive' : ''}`}
                         disabled={isLoading}
                       />
                     </div>
@@ -196,8 +204,11 @@ export default function Auth() {
                         type={showPassword ? 'text' : 'password'}
                         placeholder="Enter your password"
                         value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="pl-10 pr-10 transition-smooth"
+                        onChange={(e) => {
+                          setPassword(e.target.value);
+                          if (errors.password) setErrors({ ...errors, password: undefined });
+                        }}
+                        className={`pl-10 pr-10 transition-smooth ${errors.password ? 'border-destructive' : ''}`}
                         disabled={isLoading}
                       />
                       <button
@@ -234,8 +245,11 @@ export default function Auth() {
                         type="email"
                         placeholder="Enter your email"
                         value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="pl-10 transition-smooth"
+                        onChange={(e) => {
+                          setEmail(e.target.value);
+                          if (errors.email) setErrors({ ...errors, email: undefined });
+                        }}
+                        className={`pl-10 transition-smooth ${errors.email ? 'border-destructive' : ''}`}
                         disabled={isLoading}
                       />
                     </div>
@@ -253,8 +267,11 @@ export default function Auth() {
                         type={showPassword ? 'text' : 'password'}
                         placeholder="Create a password (min. 6 characters)"
                         value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="pl-10 pr-10 transition-smooth"
+                        onChange={(e) => {
+                          setPassword(e.target.value);
+                          if (errors.password) setErrors({ ...errors, password: undefined });
+                        }}
+                        className={`pl-10 pr-10 transition-smooth ${errors.password ? 'border-destructive' : ''}`}
                         disabled={isLoading}
                       />
                       <button
