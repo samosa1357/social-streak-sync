@@ -181,6 +181,16 @@ export function useSocial() {
   const followUser = async (followingId: string) => {
     if (!user) return;
 
+    // Prevent self-follow
+    if (user.id === followingId) {
+      toast({
+        title: 'Cannot follow yourself',
+        description: 'You cannot send a follow request to yourself.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('follows')
@@ -237,11 +247,14 @@ export function useSocial() {
   };
 
   const searchUsers = async (query: string): Promise<UserStats[]> => {
+    if (!user) return [];
+    
     try {
       const { data, error } = await supabase
         .from('user_stats')
         .select('*')
         .ilike('display_name', `%${query}%`)
+        .neq('user_id', user.id) // Exclude current user from search results
         .limit(10);
 
       if (error) throw error;

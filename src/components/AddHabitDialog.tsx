@@ -87,16 +87,26 @@ export function AddHabitDialog({ onAddHabit, onEditHabit, editingHabit, onEditCo
     }
   };
 
-  const handleClose = () => {
-    setOpen(false);
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      setHabitName('');
+      setTargetCount(1);
+      setErrors({});
+      onEditComplete?.();
+    }
+    setOpen(newOpen);
+  };
+
+  const handleCancel = () => {
     setHabitName('');
     setTargetCount(1);
     setErrors({});
+    setOpen(false);
     onEditComplete?.();
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       {!isEditing && (
         <DialogTrigger asChild>
           <Button 
@@ -162,7 +172,7 @@ export function AddHabitDialog({ onAddHabit, onEditHabit, editingHabit, onEditCo
             <Button 
               type="button" 
               variant="outline" 
-              onClick={handleClose}
+              onClick={handleCancel}
               className="flex-1 transition-smooth"
             >
               Cancel
