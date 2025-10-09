@@ -4,6 +4,7 @@ import { HabitCard } from '@/components/HabitCard';
 import { AddHabitDialog } from '@/components/AddHabitDialog';
 import { useSupabaseHabits } from '@/hooks/useSupabaseHabits';
 import { Habit } from '@/types/habit';
+import { BottomNavigation } from '@/components/BottomNavigation';
 
 export default function Home() {
   const { habits, addHabit, updateHabitProgress, decrementHabitProgress, toggleHabitComplete, editHabit, deleteHabit, getTodayProgress, userLevel, totalStreakDays, loading } = useSupabaseHabits();
@@ -111,6 +112,7 @@ export default function Home() {
           </div>
         )}
       </div>
+      <BottomNavigation />
     </div>
   );
 }
