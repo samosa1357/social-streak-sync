@@ -15,7 +15,8 @@ interface HabitCardProps {
 }
 
 export function HabitCard({ habit, onToggle, onDelete, onIncrement, onDecrement, onEdit }: HabitCardProps) {
-  const progressPercentage = (habit.currentCount / habit.targetCount) * 100;
+  const isBinary = habit.targetCount === 0;
+  const progressPercentage = isBinary ? 0 : (habit.currentCount / habit.targetCount) * 100;
   
   return (
     <Card className={cn(
@@ -49,7 +50,7 @@ export function HabitCard({ habit, onToggle, onDelete, onIncrement, onDecrement,
             </h3>
             
             <div className="flex items-center space-x-2 mt-1">
-              {habit.targetCount > 1 && (
+              {!isBinary && habit.targetCount > 0 && (
                 <div className="flex items-center space-x-1">
                   {onDecrement && !habit.completed && habit.currentCount > 0 && (
                     <Button
@@ -77,14 +78,20 @@ export function HabitCard({ habit, onToggle, onDelete, onIncrement, onDecrement,
                 </div>
               )}
               
+              {isBinary && (
+                <span className="text-xs text-muted-foreground">
+                  {habit.completed ? 'Done' : 'Not done'}
+                </span>
+              )}
+              
               {habit.streak > 0 && (
-                <span className="text-xs bg-gradient-primary text-white px-2 py-1 rounded-full">
+                <span className="text-xs gradient-primary text-primary-foreground px-2 py-1 rounded-full">
                   🔥 {habit.streak}
                 </span>
               )}
             </div>
             
-            {habit.targetCount > 1 && (
+            {!isBinary && habit.targetCount > 0 && (
               <div className="w-full bg-muted rounded-full h-2 mt-2">
                 <div 
                   className="gradient-primary h-2 rounded-full transition-smooth"

@@ -224,7 +224,8 @@ export function useSupabaseHabits() {
     if (!habit) return;
 
     const currentProgress = dailyProgress[id] || 0;
-    if (currentProgress >= habit.targetCount) return;
+    // For binary habits (targetCount = 0), don't increment
+    if (habit.targetCount === 0 || currentProgress >= habit.targetCount) return;
 
     const newProgress = currentProgress + 1;
     const updatedDailyProgress = { ...dailyProgress, [id]: newProgress };
@@ -313,7 +314,10 @@ export function useSupabaseHabits() {
     if (!habit) return;
 
     const currentProgress = dailyProgress[id] || 0;
-    const newProgress = currentProgress >= habit.targetCount ? 0 : habit.targetCount;
+    // For binary habits (targetCount = 0), toggle between 0 and 1
+    // For counter habits, toggle between 0 and targetCount
+    const targetValue = habit.targetCount === 0 ? 1 : habit.targetCount;
+    const newProgress = currentProgress >= targetValue ? 0 : targetValue;
     const updatedDailyProgress = { ...dailyProgress, [id]: newProgress };
 
     try {
@@ -360,9 +364,14 @@ export function useSupabaseHabits() {
 
     habits.forEach(habit => {
       const progress = dailyProgress[habit.id] || 0;
-      totalTasks += habit.targetCount;
-      completedTasks += progress;
-      if (progress >= habit.targetCount) {
+      // For binary habits (targetCount = 0), treat as 1 task
+      const habitTarget = habit.targetCount === 0 ? 1 : habit.targetCount;
+      const habitProgress = habit.targetCount === 0 ? Math.min(progress, 1) : progress;
+      
+      totalTasks += habitTarget;
+      completedTasks += habitProgress;
+      
+      if (habitProgress >= habitTarget) {
         completedHabits++;
       }
     });
@@ -380,11 +389,15 @@ export function useSupabaseHabits() {
 
   // Update habits with current progress when dailyProgress changes
   useEffect(() => {
-    setHabits(prev => prev.map(habit => ({
-      ...habit,
-      currentCount: dailyProgress[habit.id] || 0,
-      completed: (dailyProgress[habit.id] || 0) >= habit.targetCount
-    })));
+    setHabits(prev => prev.map(habit => {
+      const progress = dailyProgress[habit.id] || 0;
+      const targetValue = habit.targetCount === 0 ? 1 : habit.targetCount;
+      return {
+        ...habit,
+        currentCount: progress,
+        completed: progress >= targetValue
+      };
+    }));
   }, [dailyProgress]);
 
   // Load data when user changes

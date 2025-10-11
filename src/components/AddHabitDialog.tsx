@@ -15,7 +15,7 @@ const habitSchema = z.object({
     .max(100, 'Habit name must be less than 100 characters'),
   targetCount: z.number()
     .int('Target must be a whole number')
-    .min(1, 'Target must be at least 1')
+    .min(0, 'Target must be at least 0')
     .max(50, 'Target must be 50 or less')
 });
 
@@ -29,7 +29,7 @@ interface AddHabitDialogProps {
 export function AddHabitDialog({ onAddHabit, onEditHabit, editingHabit, onEditComplete }: AddHabitDialogProps) {
   const [open, setOpen] = useState(false);
   const [habitName, setHabitName] = useState('');
-  const [targetCount, setTargetCount] = useState(1);
+  const [targetCount, setTargetCount] = useState(0);
   const [errors, setErrors] = useState<{ name?: string; targetCount?: string }>({});
   const { toast } = useToast();
 
@@ -70,7 +70,7 @@ export function AddHabitDialog({ onAddHabit, onEditHabit, editingHabit, onEditCo
       }
       
       setHabitName('');
-      setTargetCount(1);
+      setTargetCount(0);
       setOpen(false);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -90,7 +90,7 @@ export function AddHabitDialog({ onAddHabit, onEditHabit, editingHabit, onEditCo
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
       setHabitName('');
-      setTargetCount(1);
+      setTargetCount(0);
       setErrors({});
       onEditComplete?.();
     }
@@ -99,7 +99,7 @@ export function AddHabitDialog({ onAddHabit, onEditHabit, editingHabit, onEditCo
 
   const handleCancel = () => {
     setHabitName('');
-    setTargetCount(1);
+    setTargetCount(0);
     setErrors({});
     setOpen(false);
     onEditComplete?.();
@@ -154,17 +154,17 @@ export function AddHabitDialog({ onAddHabit, onEditHabit, editingHabit, onEditCo
             <Input
               id="target-count"
               type="number"
-              min="1"
+              min="0"
               max="50"
               value={targetCount}
-              onChange={(e) => setTargetCount(parseInt(e.target.value) || 1)}
+              onChange={(e) => setTargetCount(parseInt(e.target.value) || 0)}
               className={`transition-smooth ${errors.targetCount ? 'border-destructive focus-visible:ring-destructive' : ''}`}
             />
             {errors.targetCount && (
               <p className="text-sm text-destructive">{errors.targetCount}</p>
             )}
             <p className="text-xs text-muted-foreground">
-              How many times per day? (e.g., 8 glasses of water)
+              0 for binary (yes/no), or number of times per day (e.g., 8 glasses of water)
             </p>
           </div>
           
@@ -180,7 +180,7 @@ export function AddHabitDialog({ onAddHabit, onEditHabit, editingHabit, onEditCo
             <Button 
               type="submit" 
               className="gradient-primary flex-1 transition-bounce"
-              disabled={!habitName.trim() || targetCount < 1}
+              disabled={!habitName.trim()}
             >
               {isEditing ? 'Save Changes' : 'Create Habit'}
             </Button>

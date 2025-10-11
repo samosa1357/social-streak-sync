@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, Settings, Moon, Sun, Star, Users, LogOut, Lock } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useSocial } from '@/hooks/useSocial';
 import { supabase } from '@/integrations/supabase/client';
 import { BottomNavigation } from '@/components/BottomNavigation';
+import { ProfilePhotoUpload } from '@/components/ProfilePhotoUpload';
 
 export default function Profile() {
   const [darkMode, setDarkMode] = useLocalStorage('zentrack-dark-mode', false);
@@ -22,6 +23,25 @@ export default function Profile() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [updatingPassword, setUpdatingPassword] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string>();
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return;
+      
+      const { data } = await supabase
+        .from('profiles')
+        .select('avatar_url')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (data?.avatar_url) {
+        setAvatarUrl(data.avatar_url);
+      }
+    };
+    
+    fetchProfile();
+  }, [user]);
 
   const handleSignOut = async () => {
     try {
@@ -125,11 +145,19 @@ export default function Profile() {
           <p className="text-muted-foreground">Manage your account</p>
         </div>
 
+        {/* Profile Photo */}
+        <Card className="p-6 gradient-card border-0 shadow-medium">
+          <ProfilePhotoUpload 
+            currentPhotoUrl={avatarUrl}
+            onPhotoUpdate={setAvatarUrl}
+          />
+        </Card>
+
         {/* User Level Card */}
         <Card className="p-6 gradient-card border-0 shadow-medium text-center">
           <div className="flex justify-center mb-4">
             <div className="p-4 gradient-primary rounded-full">
-              <Star className="h-8 w-8 text-white" />
+              <Star className="h-8 w-8 text-primary-foreground" />
             </div>
           </div>
           <h2 className="text-2xl font-bold">Level {userLevel}</h2>
