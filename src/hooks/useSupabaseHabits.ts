@@ -239,6 +239,8 @@ export function useSupabaseHabits() {
           user_id: user.id,
           date: today,
           data: updatedDailyProgress
+        }, {
+          onConflict: 'user_id,date'
         });
 
       if (error) throw error;
@@ -283,6 +285,8 @@ export function useSupabaseHabits() {
           user_id: user.id,
           date: today,
           data: updatedDailyProgress
+        }, {
+          onConflict: 'user_id,date'
         });
 
       if (error) throw error;
@@ -329,6 +333,8 @@ export function useSupabaseHabits() {
           user_id: user.id,
           date: today,
           data: updatedDailyProgress
+        }, {
+          onConflict: 'user_id,date'
         });
 
       if (error) throw error;
