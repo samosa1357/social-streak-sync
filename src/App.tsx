@@ -8,6 +8,7 @@ import Auth from "./pages/Auth";
 import Friends from "./pages/Friends";
 import History from "./pages/History";
 import Profile from "./pages/Profile";
+import UpdatePassword from "./pages/UpdatePassword";
 import Notifications from "./pages/Notifications";
 import NotFound from "./pages/NotFound";
 
@@ -25,6 +26,7 @@ const App = () => (
           <Route path="/friends" element={<Friends />} />
           <Route path="/history" element={<History />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/update-password" element={<UpdatePassword />} />
           <Route path="/notifications" element={<Notifications />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

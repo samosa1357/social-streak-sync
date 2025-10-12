@@ -393,6 +393,70 @@ export function useSupabaseHabits() {
     };
   };
 
+  const getRecentProgress = async () => {
+    if (!user || habits.length === 0) return [];
+
+    try {
+      // Get last 15 days of progress
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - 14); // 14 days ago + today = 15 days
+
+      const { data, error } = await supabase
+        .from('daily_progress')
+        .select('date, data')
+        .eq('user_id', user.id)
+        .gte('date', startDate.toISOString().split('T')[0])
+        .lte('date', endDate.toISOString().split('T')[0])
+        .order('date', { ascending: true });
+
+      if (error) throw error;
+
+      // Create array of last 15 days
+      const progressArray = [];
+      for (let i = 14; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        const dateStr = date.toISOString().split('T')[0];
+        
+        const dayData = data?.find(d => d.date === dateStr);
+        const dayProgress = dayData?.data as Record<string, number> || {};
+        
+        let completedHabits = 0;
+        let totalTasks = 0;
+        let completedTasks = 0;
+
+        habits.forEach(habit => {
+          const progress = dayProgress[habit.id] || 0;
+          const habitTarget = habit.targetCount === 0 ? 1 : habit.targetCount;
+          const habitProgress = habit.targetCount === 0 ? Math.min(progress, 1) : progress;
+          
+          totalTasks += habitTarget;
+          completedTasks += habitProgress;
+          
+          if (habitProgress >= habitTarget) {
+            completedHabits++;
+          }
+        });
+
+        const completionPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+        progressArray.push({
+          date: dateStr,
+          completionPercentage,
+          totalHabits: habits.length,
+          completedHabits,
+          allCompleted: habits.length > 0 && completedHabits === habits.length
+        });
+      }
+
+      return progressArray;
+    } catch (error) {
+      console.error('Error fetching recent progress:', error);
+      return [];
+    }
+  };
+
   // Update habits with current progress when dailyProgress changes
   useEffect(() => {
     setHabits(prev => prev.map(habit => {
@@ -435,6 +499,7 @@ export function useSupabaseHabits() {
     decrementHabitProgress,
     toggleHabitComplete,
     getTodayProgress,
+    getRecentProgress,
     userLevel,
     totalStreakDays,
     loading

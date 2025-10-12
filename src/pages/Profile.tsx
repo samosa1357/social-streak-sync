@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { User, Settings, Moon, Sun, Star, Users, LogOut, Lock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { User, Settings, Moon, Sun, Star, Users, LogOut, Lock, ChevronRight } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useSupabaseHabits } from '@/hooks/useSupabaseHabits';
@@ -16,14 +15,12 @@ import { BottomNavigation } from '@/components/BottomNavigation';
 import { ProfilePhotoUpload } from '@/components/ProfilePhotoUpload';
 
 export default function Profile() {
+  const navigate = useNavigate();
   const [darkMode, setDarkMode] = useLocalStorage('zentrack-dark-mode', false);
   const { habits, userLevel, totalStreakDays } = useSupabaseHabits();
   const { signOut, user } = useAuth();
   const { toast } = useToast();
   const { userStats } = useSocial();
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [updatingPassword, setUpdatingPassword] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string>();
   const [isPrivate, setIsPrivate] = useState(false);
 
@@ -61,60 +58,6 @@ export default function Profile() {
         description: 'Failed to sign out. Please try again.',
         variant: 'destructive',
       });
-    }
-  };
-
-  const handlePasswordUpdate = async () => {
-    if (!newPassword || !confirmPassword) {
-      toast({
-        title: 'Error',
-        description: 'Please fill in all password fields.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      toast({
-        title: 'Error',
-        description: 'Passwords do not match.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (newPassword.length < 6) {
-      toast({
-        title: 'Error',
-        description: 'Password must be at least 6 characters long.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setUpdatingPassword(true);
-    try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: 'Success',
-        description: 'Your password has been updated successfully.',
-      });
-      
-      setNewPassword('');
-      setConfirmPassword('');
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to update password.',
-        variant: 'destructive',
-      });
-    } finally {
-      setUpdatingPassword(false);
     }
   };
 
@@ -233,6 +176,17 @@ export default function Profile() {
                 onCheckedChange={togglePrivacy}
               />
             </div>
+
+            <button
+              onClick={() => navigate('/update-password')}
+              className="flex items-center justify-between w-full pt-2 border-t hover:opacity-80 transition-smooth"
+            >
+              <div className="flex items-center gap-2">
+                <Lock className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm">Update Password</span>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </button>
             
             {user && (
               <div className="pt-2 border-t">
@@ -300,44 +254,6 @@ export default function Profile() {
               <div className="text-2xl font-bold">{userLevel}</div>
               <div className="text-sm text-muted-foreground">Level</div>
             </div>
-          </div>
-        </Card>
-
-        {/* Password Update */}
-        <Card className="p-4 gradient-card border-0 shadow-soft">
-          <h3 className="font-semibold mb-4 flex items-center">
-            <Lock className="h-5 w-5 mr-2" />
-            Update Password
-          </h3>
-          
-          <div className="space-y-3">
-            <div>
-              <Label htmlFor="new-password">New Password</Label>
-              <Input
-                id="new-password"
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Enter new password"
-              />
-            </div>
-            <div>
-              <Label htmlFor="confirm-password">Confirm Password</Label>
-              <Input
-                id="confirm-password"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Confirm new password"
-              />
-            </div>
-            <Button
-              onClick={handlePasswordUpdate}
-              disabled={updatingPassword}
-              className="w-full transition-smooth"
-            >
-              {updatingPassword ? 'Updating...' : 'Update Password'}
-            </Button>
           </div>
         </Card>
 

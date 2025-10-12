@@ -1,12 +1,26 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, TrendingUp, Award } from 'lucide-react';
 import { Card } from '@/components/ui/card';
-import { useHabits } from '@/hooks/useHabits';
+import { useSupabaseHabits } from '@/hooks/useSupabaseHabits';
 import { BottomNavigation } from '@/components/BottomNavigation';
+import { DailyProgress } from '@/types/habit';
 
 export default function History() {
-  const { habits, getRecentProgress } = useHabits();
-  const recentProgress = getRecentProgress();
+  const { habits, getRecentProgress } = useSupabaseHabits();
+  const [recentProgress, setRecentProgress] = useState<DailyProgress[]>([]);
+
+  useEffect(() => {
+    const loadProgress = async () => {
+      const progress = await getRecentProgress();
+      setRecentProgress(progress);
+    };
+    
+    if (habits.length > 0) {
+      loadProgress();
+    } else {
+      setRecentProgress([]);
+    }
+  }, [habits]);
   
   const longestStreak = Math.max(...habits.map(h => h.longestStreak), 0);
   const averageCompletion = recentProgress.length > 0 
@@ -57,7 +71,7 @@ export default function History() {
           </h3>
           
           <div className="space-y-3">
-            {recentProgress.slice(-15).reverse().map((day, index) => {
+            {recentProgress.map((day, index) => {
               const date = new Date(day.date);
               const isToday = date.toDateString() === new Date().toDateString();
               
