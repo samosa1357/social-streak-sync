@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useSupabaseHabits } from '@/hooks/useSupabaseHabits';
 import { useAuth } from '@/hooks/useAuth';
@@ -24,6 +25,7 @@ export default function Profile() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [updatingPassword, setUpdatingPassword] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string>();
+  const [isPrivate, setIsPrivate] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -31,12 +33,15 @@ export default function Profile() {
       
       const { data } = await supabase
         .from('profiles')
-        .select('avatar_url')
+        .select('avatar_url, is_private')
         .eq('user_id', user.id)
         .single();
       
       if (data?.avatar_url) {
         setAvatarUrl(data.avatar_url);
+      }
+      if (data?.is_private !== undefined) {
+        setIsPrivate(data.is_private);
       }
     };
     
@@ -118,6 +123,35 @@ export default function Profile() {
     document.documentElement.classList.toggle('dark', !darkMode);
   };
 
+  const togglePrivacy = async () => {
+    if (!user) return;
+    
+    const newPrivacyValue = !isPrivate;
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_private: newPrivacyValue })
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      setIsPrivate(newPrivacyValue);
+      toast({
+        title: 'Privacy updated',
+        description: newPrivacyValue 
+          ? 'Your account is now private. Users need to send follow requests.'
+          : 'Your account is now public. Anyone can follow you.',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update privacy settings.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const getLevelTitle = (level: number) => {
     const titles = [
       'Beginner', 'Starter', 'Committed', 'Focused', 
@@ -187,6 +221,17 @@ export default function Profile() {
               >
                 {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </Button>
+            </div>
+
+            <div className="flex items-center justify-between pt-2 border-t">
+              <div className="flex items-center gap-2">
+                <Lock className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm">Private Account</span>
+              </div>
+              <Switch
+                checked={isPrivate}
+                onCheckedChange={togglePrivacy}
+              />
             </div>
             
             {user && (

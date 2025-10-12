@@ -192,19 +192,32 @@ export function useSocial() {
     }
 
     try {
+      // Check if target user has a private account
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('is_private')
+        .eq('user_id', followingId)
+        .single();
+
+      if (profileError) throw profileError;
+
+      const status = profileData?.is_private ? 'pending' : 'accepted';
+
       const { error } = await supabase
         .from('follows')
         .insert({
           follower_id: user.id,
           following_id: followingId,
-          status: 'pending'
+          status
         });
 
       if (error) throw error;
 
       toast({
-        title: 'Follow request sent!',
-        description: 'Waiting for the user to accept your request.',
+        title: status === 'pending' ? 'Follow request sent!' : 'Now following!',
+        description: status === 'pending' 
+          ? 'Waiting for the user to accept your request.'
+          : 'You are now following this user.',
       });
 
       await Promise.all([fetchFollowing(), fetchUserStats()]);
