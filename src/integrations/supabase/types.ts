@@ -204,7 +204,18 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      get_user_stats: {
+        Args: { target_user_id?: string }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          followers_count: number
+          following_count: number
+          level: number
+          total_streak_days: number
+          user_id: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

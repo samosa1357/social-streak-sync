@@ -5,6 +5,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useAvatarUrl } from '@/hooks/useAvatarUrl';
 
 interface ProfilePhotoUploadProps {
   currentPhotoUrl?: string;
@@ -15,6 +16,7 @@ export function ProfilePhotoUpload({ currentPhotoUrl, onPhotoUpdate }: ProfilePh
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+  const avatarUrl = useAvatarUrl(currentPhotoUrl);
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
@@ -76,20 +78,18 @@ export function ProfilePhotoUpload({ currentPhotoUrl, onPhotoUpdate }: ProfilePh
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
+      // Store file path instead of public URL since bucket is now private
+      const avatarPath = filePath;
 
-      // Update profile with new photo URL
+      // Update profile with file path
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ avatar_url: publicUrl })
+        .update({ avatar_url: avatarPath })
         .eq('user_id', user.id);
 
       if (updateError) throw updateError;
 
-      onPhotoUpdate(publicUrl);
+      onPhotoUpdate(avatarPath);
 
       toast({
         title: 'Success',
@@ -111,7 +111,7 @@ export function ProfilePhotoUpload({ currentPhotoUrl, onPhotoUpdate }: ProfilePh
     <div className="flex flex-col items-center space-y-4">
       <div className="relative">
         <Avatar className="h-24 w-24">
-          <AvatarImage src={currentPhotoUrl} alt="Profile" />
+          <AvatarImage src={avatarUrl || undefined} alt="Profile" />
           <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
             {user?.email?.charAt(0).toUpperCase() || 'U'}
           </AvatarFallback>
