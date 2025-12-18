@@ -9,7 +9,17 @@ import { Progress } from '@/components/ui/progress';
 import { BottomNavigation } from '@/components/BottomNavigation';
 
 export default function Friends() {
-  const { userStats, following, friendsProgress, loading, unfollowUser, searchUsers, followUser } = useSocial();
+  const { 
+    userStats, 
+    following, 
+    friendsProgress, 
+    loading, 
+    unfollowUser, 
+    searchUsers, 
+    followUser, 
+    cancelFollowRequest,
+    isPendingFollow 
+  } = useSocial();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
@@ -25,6 +35,23 @@ export default function Friends() {
 
   const isFollowing = (userId: string) => {
     return following.some(f => f.user_id === userId);
+  };
+
+  const getFollowButtonState = (userId: string) => {
+    if (isFollowing(userId)) return 'following';
+    if (isPendingFollow(userId)) return 'requested';
+    return 'not_following';
+  };
+
+  const handleFollowAction = (userId: string) => {
+    const state = getFollowButtonState(userId);
+    if (state === 'following') {
+      unfollowUser(userId);
+    } else if (state === 'requested') {
+      cancelFollowRequest(userId);
+    } else {
+      followUser(userId);
+    }
   };
 
   if (loading) {
@@ -92,10 +119,12 @@ export default function Friends() {
                   </div>
                   <Button
                     size="sm"
-                    variant={isFollowing(user.user_id) ? "outline" : "default"}
-                    onClick={() => isFollowing(user.user_id) ? unfollowUser(user.user_id) : followUser(user.user_id)}
+                    variant={getFollowButtonState(user.user_id) === 'not_following' ? 'default' : 'outline'}
+                    onClick={() => handleFollowAction(user.user_id)}
                   >
-                    {isFollowing(user.user_id) ? 'Unfollow' : 'Follow'}
+                    {getFollowButtonState(user.user_id) === 'following' && 'Unfollow'}
+                    {getFollowButtonState(user.user_id) === 'requested' && 'Requested'}
+                    {getFollowButtonState(user.user_id) === 'not_following' && 'Follow'}
                   </Button>
                 </div>
               ))}
