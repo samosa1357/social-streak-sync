@@ -25,6 +25,7 @@ export function useSocial() {
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [following, setFollowing] = useState<UserStats[]>([]);
   const [followers, setFollowers] = useState<UserStats[]>([]);
+  const [pendingOutgoing, setPendingOutgoing] = useState<string[]>([]); // IDs of users we've sent pending requests to
   const [friendsProgress, setFriendsProgress] = useState<FriendProgress[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
@@ -51,20 +52,25 @@ export function useSocial() {
     if (!user) return;
 
     try {
+      // Only get accepted follows
       const { data, error } = await supabase
         .from('follows')
-        .select('following_id')
+        .select('following_id, status')
         .eq('follower_id', user.id);
 
       if (error) throw error;
 
-      const followingIds = data.map(f => f.following_id);
+      // Separate accepted and pending
+      const acceptedIds = data.filter(f => f.status === 'accepted').map(f => f.following_id);
+      const pendingIds = data.filter(f => f.status === 'pending').map(f => f.following_id);
       
-      if (followingIds.length > 0) {
+      setPendingOutgoing(pendingIds);
+      
+      if (acceptedIds.length > 0) {
         const { data: statsData, error: statsError } = await supabase
           .from('user_stats')
           .select('*')
-          .in('user_id', followingIds);
+          .in('user_id', acceptedIds);
 
         if (statsError) throw statsError;
         setFollowing(statsData || []);
@@ -80,10 +86,12 @@ export function useSocial() {
     if (!user) return;
 
     try {
+      // Only count accepted followers
       const { data, error } = await supabase
         .from('follows')
         .select('follower_id')
-        .eq('following_id', user.id);
+        .eq('following_id', user.id)
+        .eq('status', 'accepted');
 
       if (error) throw error;
 
@@ -109,10 +117,12 @@ export function useSocial() {
     if (!user) return;
 
     try {
+      // Only show progress for accepted follows
       const { data: followingData, error: followingError } = await supabase
         .from('follows')
         .select('following_id')
-        .eq('follower_id', user.id);
+        .eq('follower_id', user.id)
+        .eq('status', 'accepted');
 
       if (followingError) throw followingError;
 
@@ -290,15 +300,51 @@ export function useSocial() {
     }
   }, [user]);
 
+  const cancelFollowRequest = async (followingId: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('follows')
+        .delete()
+        .eq('follower_id', user.id)
+        .eq('following_id', followingId)
+        .eq('status', 'pending');
+
+      if (error) throw error;
+
+      toast({
+        title: 'Request cancelled',
+        description: 'Follow request has been cancelled.',
+      });
+
+      await fetchFollowing();
+    } catch (error: any) {
+      console.error('Error cancelling follow request:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to cancel request.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const isPendingFollow = (userId: string) => {
+    return pendingOutgoing.includes(userId);
+  };
+
   return {
     userStats,
     following,
     followers,
+    pendingOutgoing,
     friendsProgress,
     loading,
     followUser,
     unfollowUser,
+    cancelFollowRequest,
     searchUsers,
+    isPendingFollow,
     refresh: () => Promise.all([
       fetchUserStats(),
       fetchFollowing(),
