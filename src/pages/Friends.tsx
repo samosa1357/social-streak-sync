@@ -11,7 +11,8 @@ import { BottomNavigation } from '@/components/BottomNavigation';
 export default function Friends() {
   const { 
     userStats, 
-    following, 
+    following,
+    followers, 
     friendsProgress, 
     pendingIncoming,
     loading, 
@@ -26,6 +27,7 @@ export default function Friends() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
+  const [activeTab, setActiveTab] = useState<'followers' | 'following'>('followers');
 
   const handleSearch = async () => {
     if (searchQuery.trim().length < 2) return;
@@ -74,18 +76,104 @@ export default function Friends() {
           <p className="text-muted-foreground">Connect and compete with friends</p>
         </div>
 
-        {/* Stats Card */}
+        {/* Stats Card with Tabs */}
         <Card className="p-4 gradient-card border-0 shadow-soft">
           <div className="grid grid-cols-2 gap-4 text-center">
-            <div>
+            <button 
+              onClick={() => setActiveTab('followers')}
+              className={`transition-colors ${activeTab === 'followers' ? 'opacity-100' : 'opacity-60'}`}
+            >
               <div className="text-2xl font-bold">{userStats?.followers_count || 0}</div>
-              <div className="text-sm text-muted-foreground">Followers</div>
-            </div>
-            <div>
+              <div className={`text-sm ${activeTab === 'followers' ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
+                Followers
+              </div>
+              {activeTab === 'followers' && <div className="h-0.5 bg-primary mt-2 rounded-full" />}
+            </button>
+            <button 
+              onClick={() => setActiveTab('following')}
+              className={`transition-colors ${activeTab === 'following' ? 'opacity-100' : 'opacity-60'}`}
+            >
               <div className="text-2xl font-bold">{userStats?.following_count || 0}</div>
-              <div className="text-sm text-muted-foreground">Following</div>
-            </div>
+              <div className={`text-sm ${activeTab === 'following' ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
+                Following
+              </div>
+              {activeTab === 'following' && <div className="h-0.5 bg-primary mt-2 rounded-full" />}
+            </button>
           </div>
+        </Card>
+
+        {/* Followers/Following List based on active tab */}
+        <Card className="p-4 gradient-card border-0 shadow-soft">
+          {activeTab === 'followers' ? (
+            <>
+              <h3 className="font-semibold mb-3 flex items-center">
+                <Users className="h-5 w-5 mr-2" />
+                Followers
+              </h3>
+              {followers.length === 0 ? (
+                <div className="text-center py-6">
+                  <Users className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">No followers yet</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {followers.map((user) => (
+                    <div key={user.user_id} className="flex items-center justify-between p-2 bg-card rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <div className="p-2 gradient-primary rounded-full">
+                          <Users className="h-4 w-4 text-white" />
+                        </div>
+                        <div>
+                          <p className="font-medium">{user.display_name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Level {user.level} • {user.total_streak_days} streak days
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <h3 className="font-semibold mb-3 flex items-center">
+                <Users className="h-5 w-5 mr-2" />
+                Following
+              </h3>
+              {following.length === 0 ? (
+                <div className="text-center py-6">
+                  <Users className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">Not following anyone yet</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {following.map((user) => (
+                    <div key={user.user_id} className="flex items-center justify-between p-2 bg-card rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <div className="p-2 gradient-primary rounded-full">
+                          <Users className="h-4 w-4 text-white" />
+                        </div>
+                        <div>
+                          <p className="font-medium">{user.display_name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Level {user.level} • {user.total_streak_days} streak days
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => unfollowUser(user.user_id)}
+                      >
+                        Unfollow
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
         </Card>
 
         {/* Pending Follow Requests */}
@@ -219,34 +307,6 @@ export default function Friends() {
           )}
         </Card>
 
-        {/* Following List */}
-        {following.length > 0 && (
-          <Card className="p-4 gradient-card border-0 shadow-soft">
-            <h3 className="font-semibold mb-3 flex items-center">
-              <Users className="h-5 w-5 mr-2" />
-              Following ({following.length})
-            </h3>
-            <div className="space-y-2">
-              {following.map((user) => (
-                <div key={user.user_id} className="flex items-center justify-between p-2 bg-card rounded-lg">
-                  <div>
-                    <p className="font-medium">{user.display_name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Level {user.level} • {user.total_streak_days} streak days
-                    </p>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => unfollowUser(user.user_id)}
-                  >
-                    Unfollow
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </Card>
-        )}
       </div>
       <BottomNavigation />
     </div>
