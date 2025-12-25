@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, Search, TrendingUp, Trophy } from 'lucide-react';
+import { Users, Search, TrendingUp, Trophy, UserPlus, Check, X } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -13,11 +13,14 @@ export default function Friends() {
     userStats, 
     following, 
     friendsProgress, 
+    pendingIncoming,
     loading, 
     unfollowUser, 
     searchUsers, 
     followUser, 
     cancelFollowRequest,
+    acceptFollowRequest,
+    declineFollowRequest,
     isPendingFollow 
   } = useSocial();
   const [searchQuery, setSearchQuery] = useState('');
@@ -84,6 +87,47 @@ export default function Friends() {
             </div>
           </div>
         </Card>
+
+        {/* Pending Follow Requests */}
+        {pendingIncoming.length > 0 && (
+          <Card className="p-4 gradient-card border-0 shadow-soft">
+            <h3 className="font-semibold mb-3 flex items-center">
+              <UserPlus className="h-5 w-5 mr-2" />
+              Follow Requests ({pendingIncoming.length})
+            </h3>
+            <div className="space-y-2">
+              {pendingIncoming.map((user) => (
+                <div key={user.user_id} className="flex items-center justify-between p-2 bg-card rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 gradient-primary rounded-full">
+                      <Users className="h-4 w-4 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-medium">{user.display_name}</p>
+                      <p className="text-xs text-muted-foreground">Level {user.level}</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="default"
+                      onClick={() => acceptFollowRequest(user.user_id)}
+                    >
+                      <Check className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => declineFollowRequest(user.user_id)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
 
         {/* Search Section */}
         <Card className="p-4 gradient-card border-0 shadow-soft">

@@ -26,6 +26,7 @@ export function useSocial() {
   const [following, setFollowing] = useState<UserStats[]>([]);
   const [followers, setFollowers] = useState<UserStats[]>([]);
   const [pendingOutgoing, setPendingOutgoing] = useState<string[]>([]); // IDs of users we've sent pending requests to
+  const [pendingIncoming, setPendingIncoming] = useState<UserStats[]>([]); // Users who sent us pending requests
   const [friendsProgress, setFriendsProgress] = useState<FriendProgress[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
@@ -110,6 +111,36 @@ export function useSocial() {
       }
     } catch (error) {
       console.error('Error fetching followers:', error);
+    }
+  };
+
+  const fetchPendingIncoming = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('follows')
+        .select('follower_id')
+        .eq('following_id', user.id)
+        .eq('status', 'pending');
+
+      if (error) throw error;
+
+      const pendingIds = data.map(f => f.follower_id);
+      
+      if (pendingIds.length > 0) {
+        const { data: statsData, error: statsError } = await supabase
+          .from('user_stats')
+          .select('*')
+          .in('user_id', pendingIds);
+
+        if (statsError) throw statsError;
+        setPendingIncoming(statsData || []);
+      } else {
+        setPendingIncoming([]);
+      }
+    } catch (error) {
+      console.error('Error fetching pending incoming requests:', error);
     }
   };
 
@@ -295,6 +326,7 @@ export function useSocial() {
         fetchUserStats(),
         fetchFollowing(),
         fetchFollowers(),
+        fetchPendingIncoming(),
         fetchFriendsProgress()
       ]).finally(() => setLoading(false));
     }
@@ -333,22 +365,84 @@ export function useSocial() {
     return pendingOutgoing.includes(userId);
   };
 
+  const acceptFollowRequest = async (followerId: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('follows')
+        .update({ status: 'accepted' })
+        .eq('follower_id', followerId)
+        .eq('following_id', user.id)
+        .eq('status', 'pending');
+
+      if (error) throw error;
+
+      toast({
+        title: 'Request accepted',
+        description: 'You have accepted the follow request.',
+      });
+
+      await Promise.all([fetchPendingIncoming(), fetchFollowers(), fetchUserStats()]);
+    } catch (error: any) {
+      console.error('Error accepting follow request:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to accept request.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const declineFollowRequest = async (followerId: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('follows')
+        .update({ status: 'rejected' })
+        .eq('follower_id', followerId)
+        .eq('following_id', user.id)
+        .eq('status', 'pending');
+
+      if (error) throw error;
+
+      toast({
+        title: 'Request declined',
+        description: 'You have declined the follow request.',
+      });
+
+      await fetchPendingIncoming();
+    } catch (error: any) {
+      console.error('Error declining follow request:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to decline request.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   return {
     userStats,
     following,
     followers,
     pendingOutgoing,
+    pendingIncoming,
     friendsProgress,
     loading,
     followUser,
     unfollowUser,
     cancelFollowRequest,
+    acceptFollowRequest,
+    declineFollowRequest,
     searchUsers,
     isPendingFollow,
     refresh: () => Promise.all([
       fetchUserStats(),
       fetchFollowing(),
       fetchFollowers(),
+      fetchPendingIncoming(),
       fetchFriendsProgress()
     ])
   };
