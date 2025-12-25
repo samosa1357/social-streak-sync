@@ -91,9 +91,9 @@ export default function Auth() {
       } else {
         toast({
           title: 'Welcome to ZenTrack!',
-          description: 'Your account has been created successfully.',
+          description: 'Let\'s set up your username.',
         });
-        navigate('/', { replace: true });
+        navigate('/setup-username', { replace: true });
       }
     } catch (error) {
       toast({
