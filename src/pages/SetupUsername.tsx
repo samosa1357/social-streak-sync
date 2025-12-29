@@ -69,21 +69,24 @@ export default function SetupUsername() {
     }
 
     setIsChecking(true);
+    setIsAvailable(null);
     try {
       const { data, error } = await supabase
         .from('profiles')
         .select('id')
         .ilike('display_name', value)
+        .neq('user_id', user?.id || '')
         .maybeSingle();
 
       if (error) throw error;
       setIsAvailable(data === null);
     } catch (err) {
+      console.error('Error checking username:', err);
       setIsAvailable(null);
     } finally {
       setIsChecking(false);
     }
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
