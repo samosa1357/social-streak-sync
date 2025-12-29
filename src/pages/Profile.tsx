@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Settings, Moon, Sun, Star, Users, LogOut, Lock, ChevronRight } from 'lucide-react';
+import { User, Settings, Moon, Sun, Star, Users, LogOut, Lock, ChevronRight, Loader2, Check, X, Edit2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import { Input } from '@/components/ui/input';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useSupabaseHabits } from '@/hooks/useSupabaseHabits';
 import { useAuth } from '@/hooks/useAuth';
@@ -13,6 +14,12 @@ import { useSocial } from '@/hooks/useSocial';
 import { supabase } from '@/integrations/supabase/client';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { ProfilePhotoUpload } from '@/components/ProfilePhotoUpload';
+import { z } from 'zod';
+
+const usernameSchema = z.string()
+  .min(3, 'Username must be at least 3 characters')
+  .max(20, 'Username must be less than 20 characters')
+  .regex(/^[a-zA-Z0-9_]+$/, 'Only letters, numbers, and underscores allowed');
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -23,6 +30,13 @@ export default function Profile() {
   const { userStats } = useSocial();
   const [avatarUrl, setAvatarUrl] = useState<string>();
   const [isPrivate, setIsPrivate] = useState(false);
+  const [displayName, setDisplayName] = useState<string>('');
+  const [isEditingUsername, setIsEditingUsername] = useState(false);
+  const [newUsername, setNewUsername] = useState('');
+  const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+  const [isUsernameAvailable, setIsUsernameAvailable] = useState<boolean | null>(null);
+  const [usernameError, setUsernameError] = useState<string | null>(null);
+  const [isSavingUsername, setIsSavingUsername] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -30,7 +44,7 @@ export default function Profile() {
       
       const { data } = await supabase
         .from('profiles')
-        .select('avatar_url, is_private')
+        .select('avatar_url, is_private, display_name')
         .eq('user_id', user.id)
         .single();
       
@@ -40,10 +54,135 @@ export default function Profile() {
       if (data?.is_private !== undefined) {
         setIsPrivate(data.is_private);
       }
+      if (data?.display_name) {
+        setDisplayName(data.display_name);
+      }
     };
     
     fetchProfile();
   }, [user]);
+
+  const checkUsernameAvailability = useCallback(async (value: string) => {
+    if (!value || value.length < 3 || value.toLowerCase() === displayName.toLowerCase()) {
+      setIsUsernameAvailable(null);
+      return;
+    }
+
+    try {
+      usernameSchema.parse(value);
+    } catch {
+      setIsUsernameAvailable(null);
+      return;
+    }
+
+    setIsCheckingUsername(true);
+    setIsUsernameAvailable(null);
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id')
+        .ilike('display_name', value)
+        .neq('user_id', user?.id || '')
+        .maybeSingle();
+
+      if (error) throw error;
+      setIsUsernameAvailable(data === null);
+    } catch (err) {
+      console.error('Error checking username:', err);
+      setIsUsernameAvailable(null);
+    } finally {
+      setIsCheckingUsername(false);
+    }
+  }, [user?.id, displayName]);
+
+  useEffect(() => {
+    if (!isEditingUsername || !newUsername) return;
+    
+    const timer = setTimeout(() => {
+      checkUsernameAvailability(newUsername);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [newUsername, isEditingUsername, checkUsernameAvailability]);
+
+  const validateUsername = (value: string) => {
+    try {
+      usernameSchema.parse(value);
+      setUsernameError(null);
+      return true;
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        setUsernameError(err.errors[0].message);
+      }
+      return false;
+    }
+  };
+
+  const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
+    setNewUsername(value);
+    setIsUsernameAvailable(null);
+    if (value) validateUsername(value);
+  };
+
+  const startEditingUsername = () => {
+    setNewUsername(displayName);
+    setIsEditingUsername(true);
+    setUsernameError(null);
+    setIsUsernameAvailable(null);
+  };
+
+  const cancelEditingUsername = () => {
+    setIsEditingUsername(false);
+    setNewUsername('');
+    setUsernameError(null);
+    setIsUsernameAvailable(null);
+  };
+
+  const saveUsername = async () => {
+    if (!user || !newUsername || !validateUsername(newUsername)) return;
+    if (newUsername.toLowerCase() === displayName.toLowerCase()) {
+      cancelEditingUsername();
+      return;
+    }
+    if (isUsernameAvailable === false) return;
+
+    setIsSavingUsername(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ display_name: newUsername.trim() })
+        .eq('user_id', user.id);
+
+      if (error) {
+        if (error.code === '23505') {
+          toast({
+            title: 'Username taken',
+            description: 'This username was just taken. Please try another one.',
+            variant: 'destructive',
+          });
+          setIsUsernameAvailable(false);
+        } else {
+          throw error;
+        }
+      } else {
+        setDisplayName(newUsername.trim());
+        setIsEditingUsername(false);
+        toast({
+          title: 'Username updated',
+          description: `Your username is now @${newUsername}`,
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update username.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSavingUsername(false);
+    }
+  };
 
   const handleSignOut = async () => {
     try {
@@ -122,12 +261,17 @@ export default function Profile() {
           <p className="text-muted-foreground">Manage your account</p>
         </div>
 
-        {/* Profile Photo */}
+        {/* Profile Photo & Username */}
         <Card className="p-6 gradient-card border-0 shadow-medium">
           <ProfilePhotoUpload 
             currentPhotoUrl={avatarUrl}
             onPhotoUpdate={setAvatarUrl}
           />
+          {displayName && (
+            <div className="text-center mt-4">
+              <p className="text-lg font-semibold">@{displayName}</p>
+            </div>
+          )}
         </Card>
 
         {/* User Level Card */}
@@ -175,6 +319,84 @@ export default function Profile() {
                 checked={isPrivate}
                 onCheckedChange={togglePrivacy}
               />
+            </div>
+
+            {/* Username Edit */}
+            <div className="pt-2 border-t">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">Username</span>
+                </div>
+                {!isEditingUsername ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={startEditingUsername}
+                    className="text-muted-foreground"
+                  >
+                    <Edit2 className="h-4 w-4 mr-1" />
+                    Edit
+                  </Button>
+                ) : null}
+              </div>
+              
+              {isEditingUsername ? (
+                <div className="mt-2 space-y-2">
+                  <div className="relative">
+                    <Input
+                      value={newUsername}
+                      onChange={handleUsernameChange}
+                      placeholder="Enter new username"
+                      maxLength={20}
+                      className={`pr-10 ${
+                        usernameError ? 'border-destructive' : 
+                        isUsernameAvailable === true ? 'border-green-500' : 
+                        isUsernameAvailable === false ? 'border-destructive' : ''
+                      }`}
+                    />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      {isCheckingUsername && (
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      )}
+                      {!isCheckingUsername && isUsernameAvailable === true && (
+                        <Check className="h-4 w-4 text-green-500" />
+                      )}
+                      {!isCheckingUsername && isUsernameAvailable === false && (
+                        <X className="h-4 w-4 text-destructive" />
+                      )}
+                    </div>
+                  </div>
+                  {usernameError && (
+                    <p className="text-xs text-destructive">{usernameError}</p>
+                  )}
+                  {!usernameError && isUsernameAvailable === false && (
+                    <p className="text-xs text-destructive">Username is already taken</p>
+                  )}
+                  {!usernameError && isUsernameAvailable === true && (
+                    <p className="text-xs text-green-500">Username is available!</p>
+                  )}
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={cancelEditingUsername}
+                      disabled={isSavingUsername}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={saveUsername}
+                      disabled={isSavingUsername || !newUsername || isUsernameAvailable === false || !!usernameError}
+                    >
+                      {isSavingUsername ? 'Saving...' : 'Save'}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground mt-1">@{displayName || 'Not set'}</p>
+              )}
             </div>
 
             <button
