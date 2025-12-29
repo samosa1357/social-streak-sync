@@ -32,9 +32,33 @@ export default function Auth() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!loading && isAuthenticated) {
-      navigate('/', { replace: true });
-    }
+    const checkUsernameAndRedirect = async () => {
+      if (!loading && isAuthenticated) {
+        // Check if user has a username set
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data } = await supabase
+            .from('profiles')
+            .select('display_name')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          
+          // If no display_name or it looks like default email prefix, go to setup
+          const hasValidUsername = data?.display_name && 
+            !data.display_name.includes('@') && 
+            data.display_name !== user.email?.split('@')[0] &&
+            data.display_name.trim() !== '';
+          
+          if (hasValidUsername) {
+            navigate('/', { replace: true });
+          } else {
+            navigate('/setup-username', { replace: true });
+          }
+        }
+      }
+    };
+    
+    checkUsernameAndRedirect();
   }, [isAuthenticated, loading, navigate]);
 
   const validateForm = () => {
@@ -132,11 +156,31 @@ export default function Auth() {
           });
         }
       } else {
-        toast({
-          title: 'Welcome back!',
-          description: 'You have been signed in successfully.',
-        });
-        navigate('/', { replace: true });
+        // Check if user has username before navigating
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (authUser) {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('display_name')
+            .eq('user_id', authUser.id)
+            .maybeSingle();
+          
+          const hasValidUsername = profileData?.display_name && 
+            !profileData.display_name.includes('@') && 
+            profileData.display_name !== authUser.email?.split('@')[0] &&
+            profileData.display_name.trim() !== '';
+          
+          toast({
+            title: 'Welcome back!',
+            description: 'You have been signed in successfully.',
+          });
+          
+          if (hasValidUsername) {
+            navigate('/', { replace: true });
+          } else {
+            navigate('/setup-username', { replace: true });
+          }
+        }
       }
     } catch (error) {
       toast({
