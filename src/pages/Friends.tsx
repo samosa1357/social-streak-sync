@@ -7,8 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { useSocial } from '@/hooks/useSocial';
 import { Progress } from '@/components/ui/progress';
 import { BottomNavigation } from '@/components/BottomNavigation';
+import { RequireUsername } from '@/components/RequireUsername';
 
-export default function Friends() {
+function FriendsContent() {
   const { 
     userStats, 
     following,
@@ -310,5 +311,13 @@ export default function Friends() {
       </div>
       <BottomNavigation />
     </div>
+  );
+}
+
+export default function Friends() {
+  return (
+    <RequireUsername>
+      <FriendsContent />
+    </RequireUsername>
   );
 }

@@ -4,8 +4,9 @@ import { Card } from '@/components/ui/card';
 import { useSupabaseHabits } from '@/hooks/useSupabaseHabits';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { DailyProgress } from '@/types/habit';
+import { RequireUsername } from '@/components/RequireUsername';
 
-export default function History() {
+function HistoryContent() {
   const { habits, getRecentProgress } = useSupabaseHabits();
   const [recentProgress, setRecentProgress] = useState<DailyProgress[]>([]);
 
@@ -137,5 +138,13 @@ export default function History() {
       </div>
       <BottomNavigation />
     </div>
+  );
+}
+
+export default function History() {
+  return (
+    <RequireUsername>
+      <HistoryContent />
+    </RequireUsername>
   );
 }

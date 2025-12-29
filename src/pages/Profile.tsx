@@ -14,6 +14,7 @@ import { useSocial } from '@/hooks/useSocial';
 import { supabase } from '@/integrations/supabase/client';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { ProfilePhotoUpload } from '@/components/ProfilePhotoUpload';
+import { RequireUsername } from '@/components/RequireUsername';
 import { z } from 'zod';
 
 const usernameSchema = z.string()
@@ -21,7 +22,7 @@ const usernameSchema = z.string()
   .max(20, 'Username must be less than 20 characters')
   .regex(/^[a-zA-Z0-9_]+$/, 'Only letters, numbers, and underscores allowed');
 
-export default function Profile() {
+function ProfileContent() {
   const navigate = useNavigate();
   const [darkMode, setDarkMode] = useLocalStorage('zentrack-dark-mode', false);
   const { habits, userLevel, totalStreakDays } = useSupabaseHabits();
@@ -498,5 +499,13 @@ export default function Profile() {
       </div>
       <BottomNavigation />
     </div>
+  );
+}
+
+export default function Profile() {
+  return (
+    <RequireUsername>
+      <ProfileContent />
+    </RequireUsername>
   );
 }

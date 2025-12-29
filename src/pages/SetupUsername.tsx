@@ -176,7 +176,7 @@ export default function SetupUsername() {
           <CardHeader className="text-center">
             <CardTitle className="text-2xl">Choose Your Username</CardTitle>
             <CardDescription>
-              Pick a unique username for your profile. This cannot be changed later.
+              Pick a unique username for your profile. You can change it later in settings.
             </CardDescription>
           </CardHeader>
           <CardContent>

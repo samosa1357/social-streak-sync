@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button';
 import { useNotifications } from '@/hooks/useNotifications';
 import { formatDistanceToNow } from 'date-fns';
 import { BottomNavigation } from '@/components/BottomNavigation';
+import { RequireUsername } from '@/components/RequireUsername';
 
-export default function Notifications() {
+function NotificationsContent() {
   const {
     notifications,
     unreadCount,
@@ -145,5 +146,13 @@ export default function Notifications() {
       </div>
       <BottomNavigation />
     </div>
+  );
+}
+
+export default function Notifications() {
+  return (
+    <RequireUsername>
+      <NotificationsContent />
+    </RequireUsername>
   );
 }
