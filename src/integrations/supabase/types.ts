@@ -216,6 +216,11 @@ export type Database = {
           user_id: string
         }[]
       }
+      is_following: {
+        Args: { target: string; viewer: string }
+        Returns: boolean
+      }
+      is_profile_public: { Args: { target: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
