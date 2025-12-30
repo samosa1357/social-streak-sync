@@ -15,6 +15,25 @@ const usernameSchema = z.string()
   .max(20, 'Username must be less than 20 characters')
   .regex(/^[a-zA-Z0-9_]+$/, 'Only letters, numbers, and underscores allowed');
 
+const generateSuggestions = (base: string): string[] => {
+  const suggestions: string[] = [];
+  const cleanBase = base.replace(/[^a-z0-9]/g, '').slice(0, 14);
+  
+  if (cleanBase.length >= 2) {
+    suggestions.push(`${cleanBase}_${Math.floor(Math.random() * 999)}`);
+    suggestions.push(`${cleanBase}${new Date().getFullYear()}`);
+    suggestions.push(`the_${cleanBase}`);
+    suggestions.push(`${cleanBase}_official`);
+  }
+  
+  // Add some random cool suggestions
+  const prefixes = ['zen', 'cool', 'super', 'pro'];
+  const randomPrefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+  suggestions.push(`${randomPrefix}_${cleanBase || 'user'}${Math.floor(Math.random() * 99)}`);
+  
+  return suggestions.filter(s => s.length >= 3 && s.length <= 20).slice(0, 4);
+};
+
 export default function SetupUsername() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
@@ -23,6 +42,7 @@ export default function SetupUsername() {
   const [isChecking, setIsChecking] = useState(false);
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const { toast } = useToast();
 
   // Check if user already has a username set
@@ -79,7 +99,15 @@ export default function SetupUsername() {
         .maybeSingle();
 
       if (error) throw error;
-      setIsAvailable(data === null);
+      const available = data === null;
+      setIsAvailable(available);
+      
+      // Generate suggestions if username is taken
+      if (!available) {
+        setSuggestions(generateSuggestions(value));
+      } else {
+        setSuggestions([]);
+      }
     } catch (err) {
       console.error('Error checking username:', err);
       setIsAvailable(null);
@@ -218,7 +246,30 @@ export default function SetupUsername() {
                   <p className="text-sm text-green-500">Username is available!</p>
                 )}
                 {!error && isAvailable === false && (
-                  <p className="text-sm text-destructive">Username is already taken</p>
+                  <div className="space-y-2">
+                    <p className="text-sm text-destructive">Username is already taken</p>
+                    {suggestions.length > 0 && (
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">Try one of these:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {suggestions.map((suggestion) => (
+                            <button
+                              key={suggestion}
+                              type="button"
+                              onClick={() => {
+                                setUsername(suggestion);
+                                setError(null);
+                                setSuggestions([]);
+                              }}
+                              className="px-2 py-1 text-xs rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                            >
+                              @{suggestion}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
                 <p className="text-xs text-muted-foreground">
                   3-20 characters. Letters, numbers, and underscores only.
