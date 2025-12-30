@@ -304,15 +304,23 @@ export function useSocial() {
     if (!user) return [];
     
     try {
+      // Use the security definer function to search users regardless of privacy
       const { data, error } = await supabase
-        .from('user_stats')
-        .select('*')
-        .ilike('display_name', `%${query}%`)
-        .neq('user_id', user.id) // Exclude current user from search results
-        .limit(10);
+        .rpc('search_users_for_discovery', {
+          search_query: query,
+          current_user_id: user.id
+        });
 
       if (error) throw error;
-      return data || [];
+      return (data || []).map((u: any) => ({
+        user_id: u.user_id,
+        display_name: u.display_name,
+        avatar_url: u.avatar_url,
+        level: u.level,
+        total_streak_days: u.total_streak_days,
+        followers_count: u.followers_count,
+        following_count: u.following_count
+      }));
     } catch (error) {
       console.error('Error searching users:', error);
       return [];
