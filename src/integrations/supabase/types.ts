@@ -221,6 +221,19 @@ export type Database = {
         Returns: boolean
       }
       is_profile_public: { Args: { target: string }; Returns: boolean }
+      search_users_for_discovery: {
+        Args: { current_user_id: string; search_query: string }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          followers_count: number
+          following_count: number
+          is_private: boolean
+          level: number
+          total_streak_days: number
+          user_id: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
