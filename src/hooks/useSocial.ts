@@ -16,9 +16,11 @@ interface UserStats {
 interface FriendProgress {
   user_id: string;
   display_name: string | null;
+  avatar_url: string | null;
   level: number;
-  completed_today: number;
-  total_habits: number;
+  completion_percentage: number;
+  completed_count: number;
+  total_count: number;
 }
 
 export function useSocial() {
@@ -183,7 +185,7 @@ export function useSocial() {
 
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('user_id, display_name')
+        .select('user_id, display_name, avatar_url')
         .in('user_id', followingIds);
 
       if (profilesError) throw profilesError;
@@ -202,14 +204,29 @@ export function useSocial() {
         const levelData = levelsData?.find(l => l.user_id === userId);
 
         const progressObj = (userProgress?.data as Record<string, number>) || {};
-        const completedToday = Object.values(progressObj).reduce((sum, val) => sum + val, 0);
+        
+        // Calculate completion percentage based on actual target counts
+        let completedCount = 0;
+        let totalTargetCount = 0;
+        
+        userHabits.forEach(habit => {
+          const habitProgress = progressObj[habit.id] || 0;
+          completedCount += Math.min(habitProgress, habit.target_count);
+          totalTargetCount += habit.target_count;
+        });
+        
+        const completionPercentage = totalTargetCount > 0 
+          ? Math.round((completedCount / totalTargetCount) * 100)
+          : 0;
 
         return {
           user_id: userId,
           display_name: profile?.display_name || 'Anonymous',
+          avatar_url: profile?.avatar_url || null,
           level: levelData?.level || 1,
-          completed_today: completedToday,
-          total_habits: userHabits.length
+          completion_percentage: completionPercentage,
+          completed_count: completedCount,
+          total_count: totalTargetCount
         };
       });
 

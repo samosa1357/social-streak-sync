@@ -281,29 +281,28 @@ function FriendsContent() {
             </div>
           ) : (
             <div className="space-y-3">
-              {friendsProgress.map((friend) => {
-                const percentage = friend.total_habits > 0 
-                  ? Math.round((friend.completed_today / (friend.total_habits * 5)) * 100) 
-                  : 0;
-                
-                return (
-                  <div key={friend.user_id} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Trophy className="h-4 w-4 text-primary" />
-                        <span className="font-medium">{friend.display_name}</span>
-                        <Badge variant="secondary" className="text-xs">
-                          Lv.{friend.level}
-                        </Badge>
-                      </div>
-                      <span className="text-sm text-muted-foreground">
-                        {friend.completed_today} tasks
-                      </span>
+              {friendsProgress.map((friend) => (
+                <div key={friend.user_id} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Trophy className="h-4 w-4 text-primary" />
+                      <span className="font-medium">{friend.display_name}</span>
+                      <Badge variant="secondary" className="text-xs">
+                        Lv.{friend.level}
+                      </Badge>
                     </div>
-                    <Progress value={percentage} className="h-2" />
+                    <span className="text-sm font-semibold text-primary">
+                      {friend.completion_percentage}%
+                    </span>
                   </div>
-                );
-              })}
+                  <div className="flex items-center gap-2">
+                    <Progress value={friend.completion_percentage} className="h-2 flex-1" />
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      {friend.completed_count}/{friend.total_count}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </Card>
