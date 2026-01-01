@@ -25,13 +25,27 @@ export function useRequireUsername() {
           .from('profiles')
           .select('display_name')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
 
         if (error) {
           console.error('Error checking username:', error);
           setHasUsername(false);
+        } else if (!data) {
+          // No profile exists yet - needs setup
+          setHasUsername(false);
         } else {
-          const hasValidUsername = !!(data?.display_name && data.display_name.trim() !== '');
+          // Check if display_name is set and is a valid username (not email-like)
+          const displayName = data.display_name?.trim() || '';
+          const emailPrefix = user.email?.split('@')[0] || '';
+          
+          // A valid username exists if:
+          // 1. display_name is not empty
+          // 2. It's not the same as email prefix (auto-generated placeholder)
+          // 3. It doesn't contain '@' (not an email)
+          const hasValidUsername = displayName !== '' && 
+            displayName !== emailPrefix && 
+            !displayName.includes('@');
+          
           setHasUsername(hasValidUsername);
           
           // Redirect to setup if no username and not already on setup page
