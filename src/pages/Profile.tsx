@@ -334,10 +334,11 @@ function ProfileContent() {
                     variant="ghost"
                     size="sm"
                     onClick={startEditingUsername}
+                    disabled
                     className="text-muted-foreground"
                   >
-                    <Edit2 className="h-4 w-4 mr-1" />
-                    Edit
+                    <Lock className="h-4 w-4 mr-1" />
+                    Locked
                   </Button>
                 ) : null}
               </div>
@@ -396,7 +397,10 @@ function ProfileContent() {
                   </div>
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground mt-1">@{displayName || 'Not set'}</p>
+                <div className="mt-1 space-y-1">
+                  <p className="text-sm text-muted-foreground">@{displayName || 'Not set'}</p>
+                  <p className="text-xs text-muted-foreground">Usernames can only be set once.</p>
+                </div>
               )}
             </div>
 

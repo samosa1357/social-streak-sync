@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { User, Check, X, Loader2 } from 'lucide-react';
 import { z } from 'zod';
+import { isEmailPrefixUsername, isValidUsername } from '@/lib/username';
 
 const usernameSchema = z.string()
   .min(3, 'Username must be at least 3 characters')
@@ -127,6 +128,12 @@ export default function SetupUsername() {
   const validateUsername = (value: string) => {
     try {
       usernameSchema.parse(value);
+
+      if (user?.email && isEmailPrefixUsername(value, user.email)) {
+        setError("Username can't be the same as your email name");
+        return false;
+      }
+
       setError(null);
       return true;
     } catch (err) {
@@ -145,8 +152,10 @@ export default function SetupUsername() {
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({ display_name: username.trim() })
-        .eq('user_id', user.id);
+        .upsert(
+          { user_id: user.id, display_name: username.trim() },
+          { onConflict: 'user_id' }
+        );
 
       if (error) {
         if (error.code === '23505') {
@@ -204,7 +213,7 @@ export default function SetupUsername() {
           <CardHeader className="text-center">
             <CardTitle className="text-2xl">Choose Your Username</CardTitle>
             <CardDescription>
-              Pick a unique username for your profile. You can change it later in settings.
+              Pick a unique username for your profile. You can’t change it later.
             </CardDescription>
           </CardHeader>
           <CardContent>

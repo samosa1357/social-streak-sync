@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import { z } from 'zod';
+import { isValidUsername } from '@/lib/username';
 
 const authSchema = z.object({
   email: z.string()
@@ -44,11 +45,8 @@ export default function Auth() {
             .maybeSingle();
           
           // If no display_name or it looks like default email prefix, go to setup
-          const hasValidUsername = data?.display_name && 
-            !data.display_name.includes('@') && 
-            data.display_name !== user.email?.split('@')[0] &&
-            data.display_name.trim() !== '';
-          
+          const hasValidUsername = isValidUsername(data?.display_name, user.email);
+
           if (hasValidUsername) {
             navigate('/', { replace: true });
           } else {
@@ -165,11 +163,8 @@ export default function Auth() {
             .eq('user_id', authUser.id)
             .maybeSingle();
           
-          const hasValidUsername = profileData?.display_name && 
-            !profileData.display_name.includes('@') && 
-            profileData.display_name !== authUser.email?.split('@')[0] &&
-            profileData.display_name.trim() !== '';
-          
+          const hasValidUsername = isValidUsername(profileData?.display_name, authUser.email);
+
           toast({
             title: 'Welcome back!',
             description: 'You have been signed in successfully.',

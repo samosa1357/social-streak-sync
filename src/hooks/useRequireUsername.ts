@@ -36,18 +36,19 @@ export function useRequireUsername() {
         } else {
           // Check if display_name is set and is a valid username (not email-like)
           const displayName = data.display_name?.trim() || '';
-          const emailPrefix = user.email?.split('@')[0] || '';
-          
+          const emailPrefix = user.email?.split('@')[0]?.trim().toLowerCase() || '';
+
           // A valid username exists if:
           // 1. display_name is not empty
           // 2. It's not the same as email prefix (auto-generated placeholder)
           // 3. It doesn't contain '@' (not an email)
-          const hasValidUsername = displayName !== '' && 
-            displayName !== emailPrefix && 
+          const hasValidUsername =
+            displayName !== '' &&
+            displayName.toLowerCase() !== emailPrefix &&
             !displayName.includes('@');
-          
+
           setHasUsername(hasValidUsername);
-          
+
           // Redirect to setup if no username and not already on setup page
           if (!hasValidUsername && location.pathname !== '/setup-username') {
             navigate('/setup-username', { replace: true });
