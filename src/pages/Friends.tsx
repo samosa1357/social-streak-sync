@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Users, Search, TrendingUp, Trophy, UserPlus, Check, X } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Users, Search, TrendingUp, Trophy, UserPlus, Check, X, Medal } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,7 @@ import { useSocial } from '@/hooks/useSocial';
 import { Progress } from '@/components/ui/progress';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { RequireUsername } from '@/components/RequireUsername';
-
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 function FriendsContent() {
   const { 
     userStats, 
@@ -59,6 +59,13 @@ function FriendsContent() {
       followUser(userId);
     }
   };
+
+  // Leaderboard - sorted by completion percentage descending
+  const leaderboard = useMemo(() => {
+    return [...friendsProgress]
+      .sort((a, b) => b.completion_percentage - a.completion_percentage)
+      .slice(0, 5);
+  }, [friendsProgress]);
 
   if (loading) {
     return (
@@ -120,12 +127,15 @@ function FriendsContent() {
                 <div className="space-y-2">
                   {followers.map((user) => (
                     <div key={user.user_id} className="flex items-center justify-between p-2 bg-card rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <div className="p-2 gradient-primary rounded-full">
-                          <Users className="h-4 w-4 text-white" />
-                        </div>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage src={user.avatar_url || undefined} />
+                          <AvatarFallback className="gradient-primary text-white">
+                            {user.display_name?.charAt(0)?.toUpperCase() || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
                         <div>
-                          <p className="font-medium">{user.display_name}</p>
+                          <p className="font-medium">{user.display_name || 'Anonymous'}</p>
                           <p className="text-xs text-muted-foreground">
                             Level {user.level} • {user.total_streak_days} streak days
                           </p>
@@ -151,12 +161,15 @@ function FriendsContent() {
                 <div className="space-y-2">
                   {following.map((user) => (
                     <div key={user.user_id} className="flex items-center justify-between p-2 bg-card rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <div className="p-2 gradient-primary rounded-full">
-                          <Users className="h-4 w-4 text-white" />
-                        </div>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage src={user.avatar_url || undefined} />
+                          <AvatarFallback className="gradient-primary text-white">
+                            {user.display_name?.charAt(0)?.toUpperCase() || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
                         <div>
-                          <p className="font-medium">{user.display_name}</p>
+                          <p className="font-medium">{user.display_name || 'Anonymous'}</p>
                           <p className="text-xs text-muted-foreground">
                             Level {user.level} • {user.total_streak_days} streak days
                           </p>
@@ -265,6 +278,45 @@ function FriendsContent() {
           )}
         </Card>
 
+        {/* Leaderboard */}
+        {leaderboard.length > 0 && (
+          <Card className="p-4 gradient-card border-0 shadow-soft">
+            <h3 className="font-semibold mb-4 flex items-center">
+              <Medal className="h-5 w-5 mr-2 text-amber-500" />
+              Today's Leaderboard
+            </h3>
+            <div className="space-y-3">
+              {leaderboard.map((friend, index) => (
+                <div key={friend.user_id} className="flex items-center gap-3 p-2 bg-card rounded-lg">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                    index === 0 ? 'bg-amber-500 text-white' : 
+                    index === 1 ? 'bg-gray-400 text-white' : 
+                    index === 2 ? 'bg-amber-700 text-white' : 
+                    'bg-muted text-muted-foreground'
+                  }`}>
+                    {index + 1}
+                  </div>
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={friend.avatar_url || undefined} />
+                    <AvatarFallback className="gradient-primary text-white">
+                      {friend.display_name?.charAt(0)?.toUpperCase() || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">{friend.display_name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Level {friend.level} • {friend.completed_count}/{friend.total_count}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-lg font-bold text-primary">{friend.completion_percentage}%</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+
         {/* Friends Progress */}
         <Card className="p-4 gradient-card border-0 shadow-soft">
           <h3 className="font-semibold mb-4 flex items-center">
@@ -284,8 +336,13 @@ function FriendsContent() {
               {friendsProgress.map((friend) => (
                 <div key={friend.user_id} className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Trophy className="h-4 w-4 text-primary" />
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={friend.avatar_url || undefined} />
+                        <AvatarFallback className="gradient-primary text-white text-xs">
+                          {friend.display_name?.charAt(0)?.toUpperCase() || 'U'}
+                        </AvatarFallback>
+                      </Avatar>
                       <span className="font-medium">{friend.display_name}</span>
                       <Badge variant="secondary" className="text-xs">
                         Lv.{friend.level}
