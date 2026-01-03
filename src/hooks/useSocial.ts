@@ -55,7 +55,7 @@ export function useSocial() {
     if (!user) return;
 
     try {
-      // Only get accepted follows
+      // Get all follows we initiated
       const { data, error } = await supabase
         .from('follows')
         .select('following_id, status')
@@ -70,13 +70,37 @@ export function useSocial() {
       setPendingOutgoing(pendingIds);
       
       if (acceptedIds.length > 0) {
-        const { data: statsData, error: statsError } = await supabase
-          .from('user_stats')
-          .select('*')
+        // Fetch profiles directly
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('user_id, display_name, avatar_url')
           .in('user_id', acceptedIds);
 
-        if (statsError) throw statsError;
-        setFollowing(statsData || []);
+        if (profilesError) throw profilesError;
+
+        const { data: progressData, error: progressError } = await supabase
+          .from('user_progress')
+          .select('user_id, level, total_streak_days')
+          .in('user_id', acceptedIds);
+
+        if (progressError) throw progressError;
+
+        // Combine profile and progress data
+        const followingData: UserStats[] = acceptedIds.map(id => {
+          const profile = profilesData?.find(p => p.user_id === id);
+          const progress = progressData?.find(p => p.user_id === id);
+          return {
+            user_id: id,
+            display_name: profile?.display_name || null,
+            avatar_url: profile?.avatar_url || null,
+            level: progress?.level || 1,
+            total_streak_days: progress?.total_streak_days || 0,
+            followers_count: 0,
+            following_count: 0
+          };
+        });
+
+        setFollowing(followingData);
       } else {
         setFollowing([]);
       }
