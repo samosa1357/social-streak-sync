@@ -101,13 +101,37 @@ export function useSocial() {
       const followerIds = data.map(f => f.follower_id);
       
       if (followerIds.length > 0) {
-        const { data: statsData, error: statsError } = await supabase
-          .from('user_stats')
-          .select('*')
+        // Use profiles table directly since followers have an accepted relationship with us
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('user_id, display_name, avatar_url')
           .in('user_id', followerIds);
 
-        if (statsError) throw statsError;
-        setFollowers(statsData || []);
+        if (profilesError) throw profilesError;
+
+        const { data: progressData, error: progressError } = await supabase
+          .from('user_progress')
+          .select('user_id, level, total_streak_days')
+          .in('user_id', followerIds);
+
+        if (progressError) throw progressError;
+
+        // Combine profile and progress data
+        const followersData: UserStats[] = followerIds.map(id => {
+          const profile = profilesData?.find(p => p.user_id === id);
+          const progress = progressData?.find(p => p.user_id === id);
+          return {
+            user_id: id,
+            display_name: profile?.display_name || null,
+            avatar_url: profile?.avatar_url || null,
+            level: progress?.level || 1,
+            total_streak_days: progress?.total_streak_days || 0,
+            followers_count: 0,
+            following_count: 0
+          };
+        });
+
+        setFollowers(followersData);
       } else {
         setFollowers([]);
       }
@@ -250,16 +274,14 @@ export function useSocial() {
     }
 
     try {
-      // Check if target user has a private account
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('is_private')
-        .eq('user_id', followingId)
-        .single();
+      // Check if target user has a private account using the security definer function
+      const { data: isPublic, error: privacyError } = await supabase
+        .rpc('is_profile_public', { target: followingId });
 
-      if (profileError) throw profileError;
+      if (privacyError) throw privacyError;
 
-      const status = profileData?.is_private ? 'pending' : 'accepted';
+      // If isPublic is true, status is 'accepted', otherwise 'pending'
+      const status = isPublic ? 'accepted' : 'pending';
 
       const { error } = await supabase
         .from('follows')
