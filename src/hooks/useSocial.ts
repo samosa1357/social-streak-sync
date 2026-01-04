@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToast } from '@/hooks/use-toast';
 
-interface UserStats {
+export interface UserStats {
   user_id: string;
   display_name: string | null;
   avatar_url: string | null;
@@ -13,7 +13,17 @@ interface UserStats {
   following_count: number;
 }
 
-interface FriendProgress {
+export interface FriendProgress {
+  user_id: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  level: number;
+  completion_percentage: number;
+  completed_count: number;
+  total_count: number;
+}
+
+export interface MyProgress {
   user_id: string;
   display_name: string | null;
   avatar_url: string | null;
@@ -30,6 +40,7 @@ export function useSocial() {
   const [pendingOutgoing, setPendingOutgoing] = useState<string[]>([]); // IDs of users we've sent pending requests to
   const [pendingIncoming, setPendingIncoming] = useState<UserStats[]>([]); // Users who sent us pending requests
   const [friendsProgress, setFriendsProgress] = useState<FriendProgress[]>([]);
+  const [myProgress, setMyProgress] = useState<MyProgress | null>(null);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const { toast } = useToast();
@@ -194,7 +205,7 @@ export function useSocial() {
     }
   };
 
-  const fetchFriendsProgress = async () => {
+  const fetchFriendsProgress = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -282,7 +293,51 @@ export function useSocial() {
     } catch (error) {
       console.error('Error fetching friends progress:', error);
     }
-  };
+  }, [user]);
+
+  // Fetch current user's own progress for leaderboard
+  const fetchMyProgress = useCallback(async () => {
+    if (!user) return;
+
+    try {
+      const today = new Date().toISOString().split('T')[0];
+
+      const [progressRes, habitsRes, profileRes, levelRes] = await Promise.all([
+        supabase.from('daily_progress').select('data').eq('user_id', user.id).eq('date', today).maybeSingle(),
+        supabase.from('habits').select('id, target_count').eq('user_id', user.id),
+        supabase.from('profiles').select('display_name, avatar_url').eq('user_id', user.id).maybeSingle(),
+        supabase.from('user_progress').select('level').eq('user_id', user.id).maybeSingle()
+      ]);
+
+      const progressObj = (progressRes.data?.data as Record<string, number>) || {};
+      const habits = habitsRes.data || [];
+      
+      let completedCount = 0;
+      let totalTargetCount = 0;
+      
+      habits.forEach(habit => {
+        const habitProgress = progressObj[habit.id] || 0;
+        completedCount += Math.min(habitProgress, habit.target_count);
+        totalTargetCount += habit.target_count;
+      });
+      
+      const completionPercentage = totalTargetCount > 0 
+        ? Math.round((completedCount / totalTargetCount) * 100)
+        : 0;
+
+      setMyProgress({
+        user_id: user.id,
+        display_name: profileRes.data?.display_name || 'You',
+        avatar_url: profileRes.data?.avatar_url || null,
+        level: levelRes.data?.level || 1,
+        completion_percentage: completionPercentage,
+        completed_count: completedCount,
+        total_count: totalTargetCount
+      });
+    } catch (error) {
+      console.error('Error fetching my progress:', error);
+    }
+  }, [user]);
 
   const followUser = async (followingId: string) => {
     if (!user) return;
@@ -398,10 +453,37 @@ export function useSocial() {
         fetchFollowing(),
         fetchFollowers(),
         fetchPendingIncoming(),
-        fetchFriendsProgress()
+        fetchFriendsProgress(),
+        fetchMyProgress()
       ]).finally(() => setLoading(false));
     }
   }, [user]);
+
+  // Real-time subscription for daily_progress changes
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('friends-progress-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'daily_progress'
+        },
+        () => {
+          // Refresh friends progress and my progress when any daily_progress changes
+          fetchFriendsProgress();
+          fetchMyProgress();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, fetchFriendsProgress, fetchMyProgress]);
 
   const cancelFollowRequest = async (followingId: string) => {
     if (!user) return;
@@ -494,6 +576,35 @@ export function useSocial() {
     }
   };
 
+  // Remove a follower (someone who follows you)
+  const removeFollower = async (followerId: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('follows')
+        .delete()
+        .eq('follower_id', followerId)
+        .eq('following_id', user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Follower removed',
+        description: 'This user is no longer following you.',
+      });
+
+      await Promise.all([fetchFollowers(), fetchUserStats()]);
+    } catch (error: any) {
+      console.error('Error removing follower:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to remove follower.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   return {
     userStats,
     following,
@@ -501,9 +612,11 @@ export function useSocial() {
     pendingOutgoing,
     pendingIncoming,
     friendsProgress,
+    myProgress,
     loading,
     followUser,
     unfollowUser,
+    removeFollower,
     cancelFollowRequest,
     acceptFollowRequest,
     declineFollowRequest,
@@ -514,7 +627,8 @@ export function useSocial() {
       fetchFollowing(),
       fetchFollowers(),
       fetchPendingIncoming(),
-      fetchFriendsProgress()
+      fetchFriendsProgress(),
+      fetchMyProgress()
     ])
   };
 }

@@ -1,23 +1,32 @@
 import React, { useState, useMemo } from 'react';
-import { Users, Search, TrendingUp, Trophy, UserPlus, Check, X, Medal } from 'lucide-react';
+import { Users, Search, TrendingUp, Trophy, UserPlus, Check, X, Medal, UserMinus, Flame, Star } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useSocial } from '@/hooks/useSocial';
+import { useSocial, UserStats, FriendProgress } from '@/hooks/useSocial';
 import { Progress } from '@/components/ui/progress';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { RequireUsername } from '@/components/RequireUsername';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+
 function FriendsContent() {
   const { 
     userStats, 
     following,
     followers, 
-    friendsProgress, 
+    friendsProgress,
+    myProgress,
     pendingIncoming,
     loading, 
-    unfollowUser, 
+    unfollowUser,
+    removeFollower,
     searchUsers, 
     followUser, 
     cancelFollowRequest,
@@ -29,6 +38,7 @@ function FriendsContent() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
   const [activeTab, setActiveTab] = useState<'followers' | 'following'>('followers');
+  const [selectedUser, setSelectedUser] = useState<UserStats | null>(null);
 
   const handleSearch = async () => {
     if (searchQuery.trim().length < 2) return;
@@ -60,12 +70,19 @@ function FriendsContent() {
     }
   };
 
-  // Leaderboard - sorted by completion percentage descending
+  // Leaderboard - sorted by completion percentage descending, including current user
   const leaderboard = useMemo(() => {
-    return [...friendsProgress]
+    const allProgress: (FriendProgress & { isCurrentUser?: boolean })[] = [...friendsProgress];
+    
+    // Add current user's progress to leaderboard
+    if (myProgress) {
+      allProgress.push({ ...myProgress, isCurrentUser: true });
+    }
+    
+    return allProgress
       .sort((a, b) => b.completion_percentage - a.completion_percentage)
       .slice(0, 5);
-  }, [friendsProgress]);
+  }, [friendsProgress, myProgress]);
 
   if (loading) {
     return (
@@ -126,7 +143,11 @@ function FriendsContent() {
               ) : (
                 <div className="space-y-2">
                   {followers.map((user) => (
-                    <div key={user.user_id} className="flex items-center justify-between p-2 bg-card rounded-lg">
+                    <div 
+                      key={user.user_id} 
+                      className="flex items-center justify-between p-2 bg-card rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => setSelectedUser(user)}
+                    >
                       <div className="flex items-center gap-3">
                         <Avatar className="h-10 w-10">
                           <AvatarImage src={user.avatar_url || undefined} />
@@ -141,6 +162,17 @@ function FriendsContent() {
                           </p>
                         </div>
                       </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeFollower(user.user_id);
+                        }}
+                      >
+                        <UserMinus className="h-4 w-4" />
+                      </Button>
                     </div>
                   ))}
                 </div>
@@ -286,33 +318,44 @@ function FriendsContent() {
               Today's Leaderboard
             </h3>
             <div className="space-y-3">
-              {leaderboard.map((friend, index) => (
-                <div key={friend.user_id} className="flex items-center gap-3 p-2 bg-card rounded-lg">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                    index === 0 ? 'bg-amber-500 text-white' : 
-                    index === 1 ? 'bg-gray-400 text-white' : 
-                    index === 2 ? 'bg-amber-700 text-white' : 
-                    'bg-muted text-muted-foreground'
-                  }`}>
-                    {index + 1}
+              {leaderboard.map((friend, index) => {
+                const isCurrentUser = 'isCurrentUser' in friend && friend.isCurrentUser;
+                return (
+                  <div 
+                    key={friend.user_id} 
+                    className={`flex items-center gap-3 p-2 rounded-lg ${
+                      isCurrentUser ? 'bg-primary/10 border border-primary/20' : 'bg-card'
+                    }`}
+                  >
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                      index === 0 ? 'bg-amber-500 text-white' : 
+                      index === 1 ? 'bg-gray-400 text-white' : 
+                      index === 2 ? 'bg-amber-700 text-white' : 
+                      'bg-muted text-muted-foreground'
+                    }`}>
+                      {index + 1}
+                    </div>
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={friend.avatar_url || undefined} />
+                      <AvatarFallback className="gradient-primary text-white">
+                        {friend.display_name?.charAt(0)?.toUpperCase() || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">
+                        {friend.display_name}
+                        {isCurrentUser && <span className="text-primary ml-1">(You)</span>}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Level {friend.level} • {friend.completed_count}/{friend.total_count}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-lg font-bold text-primary">{friend.completion_percentage}%</span>
+                    </div>
                   </div>
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage src={friend.avatar_url || undefined} />
-                    <AvatarFallback className="gradient-primary text-white">
-                      {friend.display_name?.charAt(0)?.toUpperCase() || 'U'}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{friend.display_name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Level {friend.level} • {friend.completed_count}/{friend.total_count}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-lg font-bold text-primary">{friend.completion_percentage}%</span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </Card>
         )}
@@ -363,6 +406,70 @@ function FriendsContent() {
             </div>
           )}
         </Card>
+
+        {/* User Details Dialog */}
+        <Dialog open={!!selectedUser} onOpenChange={() => setSelectedUser(null)}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>User Profile</DialogTitle>
+            </DialogHeader>
+            {selectedUser && (
+              <div className="space-y-6">
+                {/* User Info */}
+                <div className="flex items-center gap-4">
+                  <Avatar className="h-16 w-16">
+                    <AvatarImage src={selectedUser.avatar_url || undefined} />
+                    <AvatarFallback className="gradient-primary text-white text-xl">
+                      {selectedUser.display_name?.charAt(0)?.toUpperCase() || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h3 className="text-xl font-bold">{selectedUser.display_name || 'Anonymous'}</h3>
+                    <p className="text-sm text-muted-foreground">Follower</p>
+                  </div>
+                </div>
+
+                {/* Stats */}
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="text-center p-4 bg-muted rounded-lg">
+                    <div className="flex items-center justify-center mb-2">
+                      <Star className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="text-2xl font-bold">{selectedUser.level}</div>
+                    <div className="text-xs text-muted-foreground">Level</div>
+                  </div>
+                  <div className="text-center p-4 bg-muted rounded-lg">
+                    <div className="flex items-center justify-center mb-2">
+                      <Flame className="h-5 w-5 text-orange-500" />
+                    </div>
+                    <div className="text-2xl font-bold">{selectedUser.total_streak_days}</div>
+                    <div className="text-xs text-muted-foreground">Streak Days</div>
+                  </div>
+                  <div className="text-center p-4 bg-muted rounded-lg">
+                    <div className="flex items-center justify-center mb-2">
+                      <Users className="h-5 w-5 text-blue-500" />
+                    </div>
+                    <div className="text-2xl font-bold">{selectedUser.followers_count}</div>
+                    <div className="text-xs text-muted-foreground">Followers</div>
+                  </div>
+                </div>
+
+                {/* Action */}
+                <Button 
+                  variant="destructive" 
+                  className="w-full"
+                  onClick={() => {
+                    removeFollower(selectedUser.user_id);
+                    setSelectedUser(null);
+                  }}
+                >
+                  <UserMinus className="h-4 w-4 mr-2" />
+                  Remove Follower
+                </Button>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
 
       </div>
       <BottomNavigation />
