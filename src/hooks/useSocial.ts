@@ -151,18 +151,31 @@ export function useSocial() {
 
         if (progressError) throw progressError;
 
-        // Combine profile and progress data
+        // Fetch follower counts for each user
+        const { data: followsData, error: followsError } = await supabase
+          .from('follows')
+          .select('follower_id, following_id')
+          .eq('status', 'accepted');
+
+        if (followsError) throw followsError;
+
+        // Combine profile and progress data with follower counts
         const followersData: UserStats[] = followerIds.map(id => {
           const profile = profilesData?.find(p => p.user_id === id);
           const progress = progressData?.find(p => p.user_id === id);
+          
+          // Count followers and following for this user
+          const followersCount = followsData?.filter(f => f.following_id === id).length || 0;
+          const followingCount = followsData?.filter(f => f.follower_id === id).length || 0;
+          
           return {
             user_id: id,
             display_name: profile?.display_name || null,
             avatar_url: profile?.avatar_url || null,
             level: progress?.level || 1,
             total_streak_days: progress?.total_streak_days || 0,
-            followers_count: 0,
-            following_count: 0
+            followers_count: followersCount,
+            following_count: followingCount
           };
         });
 
