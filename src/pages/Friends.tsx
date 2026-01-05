@@ -347,7 +347,7 @@ function FriendsContent() {
                         {isCurrentUser && <span className="text-primary ml-1">(You)</span>}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        Level {friend.level} • {friend.completed_count}/{friend.total_count}
+                        Level {friend.level} • {friend.completed_count}/{friend.total_count} habits
                       </p>
                     </div>
                     <div className="text-right">
@@ -398,7 +398,7 @@ function FriendsContent() {
                   <div className="flex items-center gap-2">
                     <Progress value={friend.completion_percentage} className="h-2 flex-1" />
                     <span className="text-xs text-muted-foreground whitespace-nowrap">
-                      {friend.completed_count}/{friend.total_count}
+                      {friend.completed_count}/{friend.total_count} habits
                     </span>
                   </div>
                 </div>

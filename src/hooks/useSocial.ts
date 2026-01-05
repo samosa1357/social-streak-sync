@@ -278,17 +278,24 @@ export function useSocial() {
         const progressObj = (userProgress?.data as Record<string, number>) || {};
         
         // Calculate completion percentage based on actual target counts
-        let completedCount = 0;
+        let totalProgress = 0;
         let totalTargetCount = 0;
+        let completedHabits = 0;
         
         userHabits.forEach(habit => {
           const habitProgress = progressObj[habit.id] || 0;
-          completedCount += Math.min(habitProgress, habit.target_count);
-          totalTargetCount += habit.target_count;
+          const targetCount = habit.target_count === 0 ? 1 : habit.target_count;
+          totalProgress += Math.min(habitProgress, targetCount);
+          totalTargetCount += targetCount;
+          
+          // Count habit as completed if progress >= target
+          if (habitProgress >= targetCount) {
+            completedHabits++;
+          }
         });
         
         const completionPercentage = totalTargetCount > 0 
-          ? Math.round((completedCount / totalTargetCount) * 100)
+          ? Math.round((totalProgress / totalTargetCount) * 100)
           : 0;
 
         return {
@@ -297,8 +304,8 @@ export function useSocial() {
           avatar_url: profile?.avatar_url || null,
           level: levelData?.level || 1,
           completion_percentage: completionPercentage,
-          completed_count: completedCount,
-          total_count: totalTargetCount
+          completed_count: completedHabits,
+          total_count: userHabits.length
         };
       });
 
@@ -325,17 +332,24 @@ export function useSocial() {
       const progressObj = (progressRes.data?.data as Record<string, number>) || {};
       const habits = habitsRes.data || [];
       
-      let completedCount = 0;
+      let totalProgress = 0;
       let totalTargetCount = 0;
+      let completedHabits = 0;
       
       habits.forEach(habit => {
         const habitProgress = progressObj[habit.id] || 0;
-        completedCount += Math.min(habitProgress, habit.target_count);
-        totalTargetCount += habit.target_count;
+        const targetCount = habit.target_count === 0 ? 1 : habit.target_count;
+        totalProgress += Math.min(habitProgress, targetCount);
+        totalTargetCount += targetCount;
+        
+        // Count habit as completed if progress >= target
+        if (habitProgress >= targetCount) {
+          completedHabits++;
+        }
       });
       
       const completionPercentage = totalTargetCount > 0 
-        ? Math.round((completedCount / totalTargetCount) * 100)
+        ? Math.round((totalProgress / totalTargetCount) * 100)
         : 0;
 
       setMyProgress({
@@ -344,8 +358,8 @@ export function useSocial() {
         avatar_url: profileRes.data?.avatar_url || null,
         level: levelRes.data?.level || 1,
         completion_percentage: completionPercentage,
-        completed_count: completedCount,
-        total_count: totalTargetCount
+        completed_count: completedHabits,
+        total_count: habits.length
       });
     } catch (error) {
       console.error('Error fetching my progress:', error);
