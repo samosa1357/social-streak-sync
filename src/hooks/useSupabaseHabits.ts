@@ -459,6 +459,16 @@ export function useSupabaseHabits() {
 
   // Update habits with current progress when dailyProgress changes
   useEffect(() => {
+    if (Object.keys(dailyProgress).length === 0 && habits.length > 0) {
+      // Even when dailyProgress is empty, we need to ensure habits are reset
+      setHabits(prev => prev.map(habit => ({
+        ...habit,
+        currentCount: 0,
+        completed: false
+      })));
+      return;
+    }
+    
     setHabits(prev => prev.map(habit => {
       const progress = dailyProgress[habit.id] || 0;
       const targetValue = habit.targetCount === 0 ? 1 : habit.targetCount;
@@ -472,22 +482,29 @@ export function useSupabaseHabits() {
 
   // Load data when user changes
   useEffect(() => {
-    if (isAuthenticated && user) {
-      setLoading(true);
-      Promise.all([
-        fetchHabits(),
-        fetchDailyProgress(),
-        fetchUserProgress()
-      ]).finally(() => {
+    const loadData = async () => {
+      if (isAuthenticated && user) {
+        setLoading(true);
+        try {
+          // Fetch habits first
+          await fetchHabits();
+          // Then fetch daily progress
+          await fetchDailyProgress();
+          // Finally fetch user progress
+          await fetchUserProgress();
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setHabits([]);
+        setDailyProgress({});
+        setUserLevel(1);
+        setTotalStreakDays(0);
         setLoading(false);
-      });
-    } else {
-      setHabits([]);
-      setDailyProgress({});
-      setUserLevel(1);
-      setTotalStreakDays(0);
-      setLoading(false);
-    }
+      }
+    };
+    
+    loadData();
   }, [isAuthenticated, user]);
 
   return {
