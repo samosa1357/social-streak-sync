@@ -217,6 +217,77 @@ export function useSupabaseHabits() {
     }
   };
 
+  // Check and update streaks when progress changes
+  const checkAndUpdateStreaks = async (updatedProgress: Record<string, number>, habitId: string, wasCompleted: boolean, isNowCompleted: boolean) => {
+    if (!user) return;
+    
+    // Calculate if 100% is now achieved
+    let totalTasks = 0;
+    let completedTasks = 0;
+    
+    habits.forEach(habit => {
+      const progress = updatedProgress[habit.id] || 0;
+      const habitTarget = habit.targetCount === 0 ? 1 : habit.targetCount;
+      const habitProgress = habit.targetCount === 0 ? Math.min(progress, 1) : progress;
+      
+      totalTasks += habitTarget;
+      completedTasks += habitProgress;
+    });
+    
+    const is100Percent = totalTasks > 0 && completedTasks >= totalTasks;
+    
+    // Check if this was already 100% before (to avoid double-counting)
+    let wasPreviously100 = false;
+    {
+      let prevTotal = 0;
+      let prevCompleted = 0;
+      
+      habits.forEach(habit => {
+        const progress = dailyProgress[habit.id] || 0;
+        const habitTarget = habit.targetCount === 0 ? 1 : habit.targetCount;
+        const habitProgress = habit.targetCount === 0 ? Math.min(progress, 1) : progress;
+        
+        prevTotal += habitTarget;
+        prevCompleted += habitProgress;
+      });
+      
+      wasPreviously100 = prevTotal > 0 && prevCompleted >= prevTotal;
+    }
+    
+    // Update daily streak if just reached 100%
+    if (is100Percent && !wasPreviously100) {
+      try {
+        const { error } = await supabase
+          .from('user_progress')
+          .update({ 
+            total_streak_days: totalStreakDays + 1,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', user.id);
+        
+        if (!error) {
+          setTotalStreakDays(prev => prev + 1);
+        }
+      } catch (error) {
+        console.error('Error updating daily streak:', error);
+      }
+    }
+    
+    // Update individual habit streak when habit is completed
+    if (!wasCompleted && isNowCompleted) {
+      // Increment habit streak - stored in local habit state
+      setHabits(prev => prev.map(h => 
+        h.id === habitId 
+          ? { 
+              ...h, 
+              streak: h.streak + 1,
+              longestStreak: Math.max(h.longestStreak, h.streak + 1)
+            }
+          : h
+      ));
+    }
+  };
+
   const updateHabitProgress = async (id: string) => {
     if (!user) return;
 
@@ -229,6 +300,9 @@ export function useSupabaseHabits() {
 
     const newProgress = currentProgress + 1;
     const updatedDailyProgress = { ...dailyProgress, [id]: newProgress };
+    const targetValue = habit.targetCount === 0 ? 1 : habit.targetCount;
+    const wasCompleted = currentProgress >= targetValue;
+    const isNowCompleted = newProgress >= targetValue;
 
     try {
       const today = new Date().toISOString().split('T')[0];
@@ -253,10 +327,13 @@ export function useSupabaseHabits() {
           ? { 
               ...h, 
               currentCount: newProgress,
-              completed: newProgress >= h.targetCount
+              completed: isNowCompleted
             }
           : h
       ));
+      
+      // Check and update streaks
+      await checkAndUpdateStreaks(updatedDailyProgress, id, wasCompleted, isNowCompleted);
     } catch (error) {
       console.error('Error updating habit progress:', error);
       toast({
@@ -323,6 +400,8 @@ export function useSupabaseHabits() {
     const targetValue = habit.targetCount === 0 ? 1 : habit.targetCount;
     const newProgress = currentProgress >= targetValue ? 0 : targetValue;
     const updatedDailyProgress = { ...dailyProgress, [id]: newProgress };
+    const wasCompleted = currentProgress >= targetValue;
+    const isNowCompleted = newProgress >= targetValue;
 
     try {
       const today = new Date().toISOString().split('T')[0];
@@ -347,10 +426,13 @@ export function useSupabaseHabits() {
           ? { 
               ...h, 
               currentCount: newProgress,
-              completed: newProgress >= h.targetCount
+              completed: isNowCompleted
             }
           : h
       ));
+      
+      // Check and update streaks
+      await checkAndUpdateStreaks(updatedDailyProgress, id, wasCompleted, isNowCompleted);
     } catch (error) {
       console.error('Error toggling habit completion:', error);
       toast({
