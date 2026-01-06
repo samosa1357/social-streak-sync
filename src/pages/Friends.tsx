@@ -39,6 +39,7 @@ function FriendsContent() {
   const [searching, setSearching] = useState(false);
   const [activeTab, setActiveTab] = useState<'followers' | 'following'>('followers');
   const [selectedUser, setSelectedUser] = useState<UserStats | null>(null);
+  const [selectedRelation, setSelectedRelation] = useState<'follower' | 'following' | null>(null);
 
   const handleSearch = async () => {
     if (searchQuery.trim().length < 2) return;
@@ -146,7 +147,10 @@ function FriendsContent() {
                     <div 
                       key={user.user_id} 
                       className="flex items-center justify-between p-2 bg-card rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
-                      onClick={() => setSelectedUser(user)}
+                      onClick={() => {
+                        setSelectedUser(user);
+                        setSelectedRelation('follower');
+                      }}
                     >
                       <div className="flex items-center gap-3">
                         <Avatar className="h-10 w-10">
@@ -192,7 +196,14 @@ function FriendsContent() {
               ) : (
                 <div className="space-y-2">
                   {following.map((user) => (
-                    <div key={user.user_id} className="flex items-center justify-between p-2 bg-card rounded-lg">
+                    <div 
+                      key={user.user_id} 
+                      className="flex items-center justify-between p-2 bg-card rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => {
+                        setSelectedUser(user);
+                        setSelectedRelation('following');
+                      }}
+                    >
                       <div className="flex items-center gap-3">
                         <Avatar className="h-10 w-10">
                           <AvatarImage src={user.avatar_url || undefined} />
@@ -210,7 +221,10 @@ function FriendsContent() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => unfollowUser(user.user_id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          unfollowUser(user.user_id);
+                        }}
                       >
                         Unfollow
                       </Button>
@@ -408,7 +422,15 @@ function FriendsContent() {
         </Card>
 
         {/* User Details Dialog */}
-        <Dialog open={!!selectedUser} onOpenChange={() => setSelectedUser(null)}>
+        <Dialog
+          open={!!selectedUser}
+          onOpenChange={(open) => {
+            if (!open) {
+              setSelectedUser(null);
+              setSelectedRelation(null);
+            }
+          }}
+        >
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>User Profile</DialogTitle>
@@ -425,7 +447,9 @@ function FriendsContent() {
                   </Avatar>
                   <div>
                     <h3 className="text-xl font-bold">{selectedUser.display_name || 'Anonymous'}</h3>
-                    <p className="text-sm text-muted-foreground">Follower</p>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedRelation === 'following' ? 'Following' : 'Follower'}
+                    </p>
                   </div>
                 </div>
 
@@ -455,17 +479,33 @@ function FriendsContent() {
                 </div>
 
                 {/* Action */}
-                <Button 
-                  variant="destructive" 
-                  className="w-full"
-                  onClick={() => {
-                    removeFollower(selectedUser.user_id);
-                    setSelectedUser(null);
-                  }}
-                >
-                  <UserMinus className="h-4 w-4 mr-2" />
-                  Remove Follower
-                </Button>
+                {selectedRelation === 'following' ? (
+                  <Button
+                    variant="destructive"
+                    className="w-full"
+                    onClick={() => {
+                      unfollowUser(selectedUser.user_id);
+                      setSelectedUser(null);
+                      setSelectedRelation(null);
+                    }}
+                  >
+                    <UserMinus className="h-4 w-4 mr-2" />
+                    Unfollow
+                  </Button>
+                ) : (
+                  <Button
+                    variant="destructive"
+                    className="w-full"
+                    onClick={() => {
+                      removeFollower(selectedUser.user_id);
+                      setSelectedUser(null);
+                      setSelectedRelation(null);
+                    }}
+                  >
+                    <UserMinus className="h-4 w-4 mr-2" />
+                    Remove Follower
+                  </Button>
+                )}
               </div>
             )}
           </DialogContent>
