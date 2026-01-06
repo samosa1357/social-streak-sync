@@ -11,7 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Eye, EyeOff, Mail, Lock, Sun, Moon } from 'lucide-react';
 import { z } from 'zod';
 import { isValidUsername } from '@/lib/username';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useTheme } from '@/components/ThemeProvider';
 
 const authSchema = z.object({
   email: z.string()
@@ -31,17 +31,8 @@ export default function Auth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
-  const [darkMode, setDarkMode] = useLocalStorage('zentrack-dark-mode', false);
+  const { theme, toggleTheme } = useTheme();
   const { toast } = useToast();
-
-  // Apply theme on mount and when darkMode changes
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', darkMode);
-  }, [darkMode]);
-
-  const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
-  };
 
   useEffect(() => {
     const checkUsernameAndRedirect = async () => {
@@ -205,11 +196,11 @@ export default function Auth() {
       <Button
         variant="ghost"
         size="icon"
-        onClick={toggleDarkMode}
+        onClick={toggleTheme}
         className="absolute top-4 right-4 rounded-full"
         aria-label="Toggle theme"
       >
-        {darkMode ? (
+        {theme === 'dark' ? (
           <Sun className="h-5 w-5" />
         ) : (
           <Moon className="h-5 w-5" />

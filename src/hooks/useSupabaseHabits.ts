@@ -15,7 +15,7 @@ export function useSupabaseHabits() {
   const { toast } = useToast();
 
   const fetchHabits = async () => {
-    if (!user) return;
+    if (!user) return [];
 
     try {
       const { data, error } = await supabase
@@ -37,7 +37,7 @@ export function useSupabaseHabits() {
         createdAt: habit.created_at
       }));
 
-      setHabits(formattedHabits);
+      return formattedHabits;
     } catch (error) {
       console.error('Error fetching habits:', error);
       toast({
@@ -45,11 +45,12 @@ export function useSupabaseHabits() {
         description: 'Failed to load habits. Please try again.',
         variant: 'destructive',
       });
+      return [];
     }
   };
 
   const fetchDailyProgress = async () => {
-    if (!user) return;
+    if (!user) return {};
 
     try {
       const today = new Date().toISOString().split('T')[0];
@@ -64,13 +65,37 @@ export function useSupabaseHabits() {
 
       const progressData = data?.data;
       if (progressData && typeof progressData === 'object' && !Array.isArray(progressData)) {
-        setDailyProgress(progressData as Record<string, number>);
+        return progressData as Record<string, number>;
       } else {
-        setDailyProgress({});
+        return {};
       }
     } catch (error) {
       console.error('Error fetching daily progress:', error);
-      setDailyProgress({});
+      return {};
+    }
+  };
+
+  const fetchProgressHistory = async () => {
+    if (!user) return [];
+
+    try {
+      const { data, error } = await supabase
+        .from('daily_progress')
+        .select('date, data')
+        .eq('user_id', user.id)
+        .order('date', { ascending: true });
+
+      if (error) throw error;
+
+      return (data || []).map(row => ({
+        date: row.date,
+        data: (row.data && typeof row.data === 'object' && !Array.isArray(row.data)) 
+          ? row.data as Record<string, number> 
+          : {}
+      })) as ProgressRow[];
+    } catch (error) {
+      console.error('Error fetching progress history:', error);
+      return [];
     }
   };
 
@@ -540,8 +565,11 @@ export function useSupabaseHabits() {
     }
   };
 
-  // Update habits with current progress when dailyProgress changes
+  // Update habits with current progress when dailyProgress changes (after initial load)
   useEffect(() => {
+    // Skip this effect during initial load - it's handled in loadData
+    if (loading) return;
+    
     if (Object.keys(dailyProgress).length === 0 && habits.length > 0) {
       // Even when dailyProgress is empty, we need to ensure habits are reset
       setHabits(prev => prev.map(habit => ({
@@ -561,7 +589,7 @@ export function useSupabaseHabits() {
         completed: progress >= targetValue
       };
     }));
-  }, [dailyProgress]);
+  }, [dailyProgress, loading]);
 
   // Load data when user changes
   useEffect(() => {
@@ -569,12 +597,40 @@ export function useSupabaseHabits() {
       if (isAuthenticated && user) {
         setLoading(true);
         try {
-          // Fetch habits first
-          await fetchHabits();
-          // Then fetch daily progress
-          await fetchDailyProgress();
-          // Finally fetch user progress
+          // Fetch all data in parallel
+          const [fetchedHabits, fetchedProgress, progressHistory] = await Promise.all([
+            fetchHabits(),
+            fetchDailyProgress(),
+            fetchProgressHistory()
+          ]);
+          
           await fetchUserProgress();
+          
+          // Calculate streaks from progress history
+          const todayISO = new Date().toISOString().split('T')[0];
+          const streakHabits = fetchedHabits.map(h => ({ id: h.id, targetCount: h.targetCount }));
+          const streaks = calculateHabitStreaks({
+            habits: streakHabits,
+            progressRows: progressHistory,
+            todayISO
+          });
+          
+          // Apply streaks and daily progress to habits
+          const habitsWithStreaks = fetchedHabits.map(habit => {
+            const habitStreaks = streaks[habit.id] || { current: 0, best: 0 };
+            const progress = fetchedProgress[habit.id] || 0;
+            const targetValue = habit.targetCount === 0 ? 1 : habit.targetCount;
+            return {
+              ...habit,
+              streak: habitStreaks.current,
+              longestStreak: habitStreaks.best,
+              currentCount: progress,
+              completed: progress >= targetValue
+            };
+          });
+          
+          setHabits(habitsWithStreaks);
+          setDailyProgress(fetchedProgress);
         } finally {
           setLoading(false);
         }
