@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Habit } from '@/types/habit';
+import { calculateHabitStreaks, calculatePerfectDayCount, type ProgressRow } from '@/lib/streaks';
 
 export function useSupabaseHabits() {
   const [habits, setHabits] = useState<Habit[]>([]);

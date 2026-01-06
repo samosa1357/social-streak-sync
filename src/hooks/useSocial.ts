@@ -77,9 +77,9 @@ export function useSocial() {
       // Separate accepted and pending
       const acceptedIds = data.filter(f => f.status === 'accepted').map(f => f.following_id);
       const pendingIds = data.filter(f => f.status === 'pending').map(f => f.following_id);
-      
+
       setPendingOutgoing(pendingIds);
-      
+
       if (acceptedIds.length > 0) {
         // Fetch profiles directly
         const { data: profilesData, error: profilesError } = await supabase
@@ -96,18 +96,30 @@ export function useSocial() {
 
         if (progressError) throw progressError;
 
+        // Fetch follower/following counts (accepted only)
+        const { data: followsData, error: followsError } = await supabase
+          .from('follows')
+          .select('follower_id, following_id')
+          .eq('status', 'accepted');
+
+        if (followsError) throw followsError;
+
         // Combine profile and progress data
         const followingData: UserStats[] = acceptedIds.map(id => {
           const profile = profilesData?.find(p => p.user_id === id);
           const progress = progressData?.find(p => p.user_id === id);
+
+          const followersCount = followsData?.filter(f => f.following_id === id).length || 0;
+          const followingCount = followsData?.filter(f => f.follower_id === id).length || 0;
+
           return {
             user_id: id,
             display_name: profile?.display_name || null,
             avatar_url: profile?.avatar_url || null,
             level: progress?.level || 1,
             total_streak_days: progress?.total_streak_days || 0,
-            followers_count: 0,
-            following_count: 0
+            followers_count: followersCount,
+            following_count: followingCount
           };
         });
 
@@ -429,12 +441,16 @@ export function useSocial() {
 
       if (error) throw error;
 
+      // Optimistic UI updates so they disappear from leaderboard immediately
+      setFollowing(prev => prev.filter(u => u.user_id !== followingId));
+      setFriendsProgress(prev => prev.filter(p => p.user_id !== followingId));
+
       toast({
         title: 'Success',
         description: 'You have unfollowed this user.',
       });
 
-      await Promise.all([fetchFollowing(), fetchUserStats()]);
+      await Promise.all([fetchFollowing(), fetchUserStats(), fetchFriendsProgress()]);
     } catch (error: any) {
       console.error('Error unfollowing user:', error);
       toast({
