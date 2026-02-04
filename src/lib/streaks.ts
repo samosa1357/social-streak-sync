@@ -104,3 +104,45 @@ export function calculatePerfectDayCount(params: {
 
   return count;
 }
+
+// Calculate current consecutive perfect day streak (all habits completed)
+export function calculatePerfectDayStreak(params: {
+  habits: StreakHabit[];
+  progressRows: ProgressRow[];
+  todayISO: string;
+}): number {
+  const { habits, progressRows, todayISO } = params;
+  
+  if (habits.length === 0) return 0;
+
+  const byDate = new Map<string, Record<string, number>>(
+    progressRows.map((r) => [r.date, r.data ?? {}])
+  );
+
+  const today = new Date(todayISO);
+
+  function isPerfectDay(dateISO: string): boolean {
+    const dayData = byDate.get(dateISO) ?? {};
+    return habits.every((h) => isCompletedForHabit(h, dayData));
+  }
+
+  // Check if today or yesterday is perfect to start the streak
+  const todayData = byDate.get(todayISO) ?? {};
+  const yesterdayISO = toISODate(addDays(today, -1));
+
+  let anchorISO: string | null = null;
+  if (isPerfectDay(todayISO)) anchorISO = todayISO;
+  else if (isPerfectDay(yesterdayISO)) anchorISO = yesterdayISO;
+
+  if (!anchorISO) return 0;
+
+  // Count consecutive perfect days backwards
+  let streak = 0;
+  for (let d = new Date(anchorISO); ; d = addDays(d, -1)) {
+    const key = toISODate(d);
+    if (!isPerfectDay(key)) break;
+    streak += 1;
+  }
+
+  return streak;
+}

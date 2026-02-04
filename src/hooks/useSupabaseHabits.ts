@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Habit } from '@/types/habit';
-import { calculateHabitStreaks, calculatePerfectDayCount, type ProgressRow } from '@/lib/streaks';
+import { calculateHabitStreaks, calculatePerfectDayStreak, type ProgressRow } from '@/lib/streaks';
 
 export function useSupabaseHabits() {
   const [habits, setHabits] = useState<Habit[]>([]);
@@ -614,6 +614,14 @@ export function useSupabaseHabits() {
             progressRows: progressHistory,
             todayISO
           });
+          
+          // Calculate the actual consecutive perfect day streak
+          const perfectDayStreak = calculatePerfectDayStreak({
+            habits: streakHabits,
+            progressRows: progressHistory,
+            todayISO
+          });
+          setTotalStreakDays(perfectDayStreak);
           
           // Apply streaks and daily progress to habits
           const habitsWithStreaks = fetchedHabits.map(habit => {
