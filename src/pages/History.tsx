@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, TrendingUp, Award } from 'lucide-react';
+import { Calendar, TrendingUp, Award, ChevronDown } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { useSupabaseHabits } from '@/hooks/useSupabaseHabits';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { DailyProgress } from '@/types/habit';
 import { RequireUsername } from '@/components/RequireUsername';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 function HistoryContent() {
   const { habits, getRecentProgress } = useSupabaseHabits();
@@ -65,54 +66,63 @@ function HistoryContent() {
         </div>
 
         {/* Progress History */}
-        <Card className="p-4 gradient-card border-0 shadow-medium">
-          <h3 className="font-semibold mb-4 flex items-center">
-            <Calendar className="h-5 w-5 mr-2" />
-            Last 15 Days
-          </h3>
-          
-          <div className="space-y-3">
-            {recentProgress.map((day, index) => {
-              const date = new Date(day.date);
-              const isToday = date.toDateString() === new Date().toDateString();
-              
-              return (
-                <div key={day.date} className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className={`w-3 h-3 rounded-full ${
-                      day.allCompleted 
-                        ? 'bg-success' 
-                        : day.completionPercentage > 50 
-                        ? 'bg-warning' 
-                        : 'bg-muted'
-                    }`} />
-                    <span className={`text-sm ${isToday ? 'font-semibold' : ''}`}>
-                      {isToday ? 'Today' : date.toLocaleDateString('en-US', { 
-                        month: 'short', 
-                        day: 'numeric' 
-                      })}
-                    </span>
-                  </div>
+        <Collapsible defaultOpen className="w-full">
+          <Card className="p-4 gradient-card border-0 shadow-medium">
+            <CollapsibleTrigger className="w-full">
+              <h3 className="font-semibold flex items-center justify-between cursor-pointer">
+                <span className="flex items-center">
+                  <Calendar className="h-5 w-5 mr-2" />
+                  Last 15 Days
+                </span>
+                <ChevronDown className="h-4 w-4 transition-transform duration-200 [&[data-state=open]]:rotate-180" />
+              </h3>
+            </CollapsibleTrigger>
+            
+            <CollapsibleContent className="mt-4">
+              <div className="space-y-3">
+                {recentProgress.map((day, index) => {
+                  const date = new Date(day.date);
+                  const isToday = date.toDateString() === new Date().toDateString();
                   
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm text-muted-foreground">
-                      {day.completedHabits}/{day.totalHabits}
-                    </span>
-                    <span className="text-sm font-medium">
-                      {day.completionPercentage}%
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          
-          {recentProgress.length === 0 && (
-            <p className="text-center text-muted-foreground py-8">
-              Start tracking habits to see your progress history!
-            </p>
-          )}
-        </Card>
+                  return (
+                    <div key={day.date} className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-3 h-3 rounded-full ${
+                          day.allCompleted 
+                            ? 'bg-success' 
+                            : day.completionPercentage > 50 
+                            ? 'bg-warning' 
+                            : 'bg-muted'
+                        }`} />
+                        <span className={`text-sm ${isToday ? 'font-semibold' : ''}`}>
+                          {isToday ? 'Today' : date.toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric' 
+                          })}
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm text-muted-foreground">
+                          {day.completedHabits}/{day.totalHabits}
+                        </span>
+                        <span className="text-sm font-medium">
+                          {day.completionPercentage}%
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              
+              {recentProgress.length === 0 && (
+                <p className="text-center text-muted-foreground py-8">
+                  Start tracking habits to see your progress history!
+                </p>
+              )}
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
 
         {/* Individual Habit Streaks */}
         {habits.length > 0 && (
