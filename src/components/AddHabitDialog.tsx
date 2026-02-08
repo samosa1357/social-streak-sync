@@ -29,7 +29,7 @@ interface AddHabitDialogProps {
 export function AddHabitDialog({ onAddHabit, onEditHabit, editingHabit, onEditComplete }: AddHabitDialogProps) {
   const [open, setOpen] = useState(false);
   const [habitName, setHabitName] = useState('');
-  const [targetCount, setTargetCount] = useState(0);
+  const [targetCount, setTargetCount] = useState<number | ''>('');
   const [errors, setErrors] = useState<{ name?: string; targetCount?: string }>({});
   const { toast } = useToast();
 
@@ -38,7 +38,7 @@ export function AddHabitDialog({ onAddHabit, onEditHabit, editingHabit, onEditCo
   useEffect(() => {
     if (editingHabit) {
       setHabitName(editingHabit.name);
-      setTargetCount(editingHabit.targetCount);
+      setTargetCount(editingHabit.targetCount || '');
       setOpen(true);
       setErrors({});
     }
@@ -51,7 +51,7 @@ export function AddHabitDialog({ onAddHabit, onEditHabit, editingHabit, onEditCo
     try {
       const validated = habitSchema.parse({
         name: habitName,
-        targetCount: targetCount
+        targetCount: targetCount === '' ? 0 : targetCount
       });
 
       if (isEditing && editingHabit && onEditHabit) {
@@ -70,7 +70,7 @@ export function AddHabitDialog({ onAddHabit, onEditHabit, editingHabit, onEditCo
       }
       
       setHabitName('');
-      setTargetCount(0);
+      setTargetCount('');
       setOpen(false);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -90,7 +90,7 @@ export function AddHabitDialog({ onAddHabit, onEditHabit, editingHabit, onEditCo
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
       setHabitName('');
-      setTargetCount(0);
+      setTargetCount('');
       setErrors({});
       onEditComplete?.();
     }
@@ -99,7 +99,7 @@ export function AddHabitDialog({ onAddHabit, onEditHabit, editingHabit, onEditCo
 
   const handleCancel = () => {
     setHabitName('');
-    setTargetCount(0);
+    setTargetCount('');
     setErrors({});
     setOpen(false);
     onEditComplete?.();
@@ -154,10 +154,15 @@ export function AddHabitDialog({ onAddHabit, onEditHabit, editingHabit, onEditCo
             <Input
               id="target-count"
               type="number"
+              inputMode="numeric"
+              pattern="[0-9]*"
               min="0"
               max="50"
               value={targetCount}
-              onChange={(e) => setTargetCount(parseInt(e.target.value) || 0)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setTargetCount(val === '' ? '' : parseInt(val) || 0);
+              }}
               className={`transition-smooth ${errors.targetCount ? 'border-destructive focus-visible:ring-destructive' : ''}`}
             />
             {errors.targetCount && (
@@ -180,7 +185,7 @@ export function AddHabitDialog({ onAddHabit, onEditHabit, editingHabit, onEditCo
             <Button 
               type="submit" 
               className="gradient-primary flex-1 transition-bounce"
-              disabled={!habitName.trim()}
+              disabled={!habitName.trim() || targetCount === '' || targetCount < 0}
             >
               {isEditing ? 'Save Changes' : 'Create Habit'}
             </Button>
