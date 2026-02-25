@@ -80,6 +80,8 @@ export function useHabits() {
       streak: 0,
       longestStreak: 0,
       createdAt: new Date().toISOString(),
+      frequencyType: 'daily',
+      weeklyTarget: 7,
     };
     setHabits(prev => [...prev, newHabit]);
   };

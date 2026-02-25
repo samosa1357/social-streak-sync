@@ -34,7 +34,9 @@ export function useSupabaseHabits() {
         completed: false,
         streak: 0,
         longestStreak: 0,
-        createdAt: habit.created_at
+        createdAt: habit.created_at,
+        frequencyType: (habit as any).frequency_type || 'daily',
+        weeklyTarget: (habit as any).weekly_target || 7,
       }));
 
       return formattedHabits;
@@ -135,7 +137,7 @@ export function useSupabaseHabits() {
     }
   };
 
-  const addHabit = async (name: string, targetCount: number) => {
+  const addHabit = async (name: string, targetCount: number, frequencyType: 'daily' | 'weekly' = 'daily', weeklyTarget: number = 7) => {
     if (!user || habits.length >= 7) return;
 
     try {
@@ -144,8 +146,10 @@ export function useSupabaseHabits() {
         .insert({
           user_id: user.id,
           name,
-          target_count: targetCount
-        })
+          target_count: targetCount,
+          frequency_type: frequencyType,
+          weekly_target: weeklyTarget,
+        } as any)
         .select()
         .single();
 
@@ -159,7 +163,9 @@ export function useSupabaseHabits() {
         completed: false,
         streak: 0,
         longestStreak: 0,
-        createdAt: data.created_at
+        createdAt: data.created_at,
+        frequencyType: (data as any).frequency_type || 'daily',
+        weeklyTarget: (data as any).weekly_target || 7,
       };
 
       setHabits(prev => [...prev, newHabit]);
@@ -470,15 +476,15 @@ export function useSupabaseHabits() {
   };
 
   const getTodayProgress = () => {
-    if (habits.length === 0) return { percentage: 0, completedHabits: 0, totalHabits: 0, completedTasks: 0, totalTasks: 0 };
+    const dailyHabits = habits.filter(h => h.frequencyType === 'daily');
+    if (dailyHabits.length === 0) return { percentage: 0, completedHabits: 0, totalHabits: 0, completedTasks: 0, totalTasks: 0 };
 
     let totalTasks = 0;
     let completedTasks = 0;
     let completedHabits = 0;
 
-    habits.forEach(habit => {
+    dailyHabits.forEach(habit => {
       const progress = dailyProgress[habit.id] || 0;
-      // For binary habits (targetCount = 0), treat as 1 task
       const habitTarget = habit.targetCount === 0 ? 1 : habit.targetCount;
       const habitProgress = habit.targetCount === 0 ? Math.min(progress, 1) : progress;
       
@@ -495,7 +501,7 @@ export function useSupabaseHabits() {
     return {
       percentage,
       completedHabits,
-      totalHabits: habits.length,
+      totalHabits: dailyHabits.length,
       completedTasks,
       totalTasks
     };
@@ -623,17 +629,41 @@ export function useSupabaseHabits() {
           });
           setTotalStreakDays(perfectDayStreak);
           
+          // Calculate weekly completions for weekly habits
+          const getWeekStart = () => {
+            const now = new Date();
+            const day = now.getDay();
+            const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Monday
+            const monday = new Date(now);
+            monday.setDate(diff);
+            return monday.toISOString().split('T')[0];
+          };
+          const weekStartISO = getWeekStart();
+          const thisWeekRows = progressHistory.filter(r => r.date >= weekStartISO);
+          
           // Apply streaks and daily progress to habits
           const habitsWithStreaks = fetchedHabits.map(habit => {
             const habitStreaks = streaks[habit.id] || { current: 0, best: 0 };
             const progress = fetchedProgress[habit.id] || 0;
             const targetValue = habit.targetCount === 0 ? 1 : habit.targetCount;
+            
+            // Count weekly completions
+            let weeklyCompletions = 0;
+            if (habit.frequencyType === 'weekly') {
+              thisWeekRows.forEach(row => {
+                const dayProgress = row.data[habit.id] || 0;
+                const dayTarget = habit.targetCount === 0 ? 1 : habit.targetCount;
+                if (dayProgress >= dayTarget) weeklyCompletions++;
+              });
+            }
+            
             return {
               ...habit,
               streak: habitStreaks.current,
               longestStreak: habitStreaks.best,
               currentCount: progress,
-              completed: progress >= targetValue
+              completed: progress >= targetValue,
+              weeklyCompletions,
             };
           });
           

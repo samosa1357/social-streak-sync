@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle2, Circle, Trash2, Edit, Plus, Minus } from 'lucide-react';
+import { CheckCircle2, Circle, Trash2, Edit, Plus, Minus, Flame } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -85,8 +85,9 @@ export function HabitCard({ habit, onToggle, onDelete, onIncrement, onDecrement,
               )}
               
               {habit.streak > 0 && (
-                <span className="text-xs gradient-primary text-primary-foreground px-2 py-1 rounded-full">
-                  🔥 {habit.streak}
+                <span className="text-xs inline-flex items-center gap-1 gradient-primary text-primary-foreground px-2 py-1 rounded-full">
+                  <Flame className="h-3 w-3" />
+                  {habit.streak}
                 </span>
               )}
             </div>
