@@ -16,11 +16,13 @@ const habitSchema = z.object({
   targetCount: z.number()
     .int('Target must be a whole number')
     .min(0, 'Target must be at least 0')
-    .max(50, 'Target must be 50 or less')
+    .max(50, 'Target must be 50 or less'),
+  frequencyType: z.enum(['daily', 'weekly']),
+  weeklyTarget: z.number().int().min(1).max(7).optional(),
 });
 
 interface AddHabitDialogProps {
-  onAddHabit: (name: string, targetCount: number) => void;
+  onAddHabit: (name: string, targetCount: number, frequencyType?: 'daily' | 'weekly', weeklyTarget?: number) => void;
   onEditHabit?: (id: string, name: string, targetCount: number) => void;
   editingHabit?: Habit | null;
   onEditComplete?: () => void;
@@ -30,6 +32,8 @@ export function AddHabitDialog({ onAddHabit, onEditHabit, editingHabit, onEditCo
   const [open, setOpen] = useState(false);
   const [habitName, setHabitName] = useState('');
   const [targetCount, setTargetCount] = useState<number | ''>('');
+  const [frequencyType, setFrequencyType] = useState<'daily' | 'weekly'>('daily');
+  const [weeklyTarget, setWeeklyTarget] = useState<number>(2);
   const [errors, setErrors] = useState<{ name?: string; targetCount?: string }>({});
   const { toast } = useToast();
 
@@ -39,6 +43,8 @@ export function AddHabitDialog({ onAddHabit, onEditHabit, editingHabit, onEditCo
     if (editingHabit) {
       setHabitName(editingHabit.name);
       setTargetCount(editingHabit.targetCount || '');
+      setFrequencyType(editingHabit.frequencyType || 'daily');
+      setWeeklyTarget(editingHabit.weeklyTarget || 2);
       setOpen(true);
       setErrors({});
     }
@@ -51,7 +57,9 @@ export function AddHabitDialog({ onAddHabit, onEditHabit, editingHabit, onEditCo
     try {
       const validated = habitSchema.parse({
         name: habitName,
-        targetCount: targetCount === '' ? 0 : targetCount
+        targetCount: targetCount === '' ? 0 : targetCount,
+        frequencyType,
+        weeklyTarget: frequencyType === 'weekly' ? weeklyTarget : undefined,
       });
 
       if (isEditing && editingHabit && onEditHabit) {
@@ -62,15 +70,14 @@ export function AddHabitDialog({ onAddHabit, onEditHabit, editingHabit, onEditCo
         });
         onEditComplete?.();
       } else {
-        onAddHabit(validated.name, validated.targetCount);
+        onAddHabit(validated.name, validated.targetCount, validated.frequencyType, validated.weeklyTarget);
         toast({
           title: 'Habit created',
-          description: `"${validated.name}" has been added to your daily habits.`
+          description: `"${validated.name}" has been added to your ${validated.frequencyType} habits.`
         });
       }
       
-      setHabitName('');
-      setTargetCount('');
+      resetForm();
       setOpen(false);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -87,20 +94,24 @@ export function AddHabitDialog({ onAddHabit, onEditHabit, editingHabit, onEditCo
     }
   };
 
+  const resetForm = () => {
+    setHabitName('');
+    setTargetCount('');
+    setFrequencyType('daily');
+    setWeeklyTarget(2);
+    setErrors({});
+  };
+
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
-      setHabitName('');
-      setTargetCount('');
-      setErrors({});
+      resetForm();
       onEditComplete?.();
     }
     setOpen(newOpen);
   };
 
   const handleCancel = () => {
-    setHabitName('');
-    setTargetCount('');
-    setErrors({});
+    resetForm();
     setOpen(false);
     onEditComplete?.();
   };
@@ -126,7 +137,7 @@ export function AddHabitDialog({ onAddHabit, onEditHabit, editingHabit, onEditCo
           <DialogDescription className="text-muted-foreground">
             {isEditing 
               ? 'Update your habit details below.' 
-              : 'Add a new habit to track daily. Set a target to stay motivated!'}
+              : 'Add a new habit to track. Choose daily or weekly frequency!'}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-5 pt-2">
@@ -138,7 +149,7 @@ export function AddHabitDialog({ onAddHabit, onEditHabit, editingHabit, onEditCo
               id="habit-name"
               value={habitName}
               onChange={(e) => setHabitName(e.target.value)}
-              placeholder="e.g., Drink water, Exercise, Read..."
+              placeholder="e.g., Drink water, Clean room..."
               className={`transition-smooth ${errors.name ? 'border-destructive focus-visible:ring-destructive' : ''}`}
               maxLength={100}
             />
@@ -146,32 +157,86 @@ export function AddHabitDialog({ onAddHabit, onEditHabit, editingHabit, onEditCo
               <p className="text-sm text-destructive">{errors.name}</p>
             )}
           </div>
+
+          {/* Frequency Type Toggle */}
+          {!isEditing && (
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Frequency</Label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={frequencyType === 'daily' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setFrequencyType('daily')}
+                  className={frequencyType === 'daily' ? 'gradient-primary flex-1' : 'flex-1'}
+                >
+                  Daily
+                </Button>
+                <Button
+                  type="button"
+                  variant={frequencyType === 'weekly' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setFrequencyType('weekly')}
+                  className={frequencyType === 'weekly' ? 'gradient-primary flex-1' : 'flex-1'}
+                >
+                  Weekly
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {frequencyType === 'weekly' && !isEditing && (
+            <div className="space-y-2">
+              <Label htmlFor="weekly-target" className="text-sm font-medium">
+                Times per week <span className="text-destructive">*</span>
+              </Label>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5, 6].map(n => (
+                  <Button
+                    key={n}
+                    type="button"
+                    variant={weeklyTarget === n ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setWeeklyTarget(n)}
+                    className={weeklyTarget === n ? 'gradient-primary flex-1' : 'flex-1'}
+                  >
+                    {n}x
+                  </Button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                How many times per week you want to do this habit
+              </p>
+            </div>
+          )}
           
-          <div className="space-y-2">
-            <Label htmlFor="target-count" className="text-sm font-medium">
-              Daily Target <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="target-count"
-              type="number"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              min="0"
-              max="50"
-              value={targetCount}
-              onChange={(e) => {
-                const val = e.target.value;
-                setTargetCount(val === '' ? '' : parseInt(val) || 0);
-              }}
-              className={`transition-smooth ${errors.targetCount ? 'border-destructive focus-visible:ring-destructive' : ''}`}
-            />
-            {errors.targetCount && (
-              <p className="text-sm text-destructive">{errors.targetCount}</p>
-            )}
-            <p className="text-xs text-muted-foreground">
-              0 for binary (yes/no), or number of times per day (e.g., 8 glasses of water)
-            </p>
-          </div>
+          {frequencyType === 'daily' && (
+            <div className="space-y-2">
+              <Label htmlFor="target-count" className="text-sm font-medium">
+                Daily Target <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="target-count"
+                type="number"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                min="0"
+                max="50"
+                value={targetCount}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setTargetCount(val === '' ? '' : parseInt(val) || 0);
+                }}
+                className={`transition-smooth ${errors.targetCount ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+              />
+              {errors.targetCount && (
+                <p className="text-sm text-destructive">{errors.targetCount}</p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                0 for binary (yes/no), or number of times per day (e.g., 8 glasses of water)
+              </p>
+            </div>
+          )}
           
           <div className="flex gap-3 pt-4">
             <Button 
@@ -185,7 +250,7 @@ export function AddHabitDialog({ onAddHabit, onEditHabit, editingHabit, onEditCo
             <Button 
               type="submit" 
               className="gradient-primary flex-1 transition-bounce"
-              disabled={!habitName.trim() || targetCount === '' || targetCount < 0}
+              disabled={!habitName.trim() || (frequencyType === 'daily' && (targetCount === '' || targetCount < 0))}
             >
               {isEditing ? 'Save Changes' : 'Create Habit'}
             </Button>

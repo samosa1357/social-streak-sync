@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { DailyOverview } from '@/components/DailyOverview';
 import { HabitCard } from '@/components/HabitCard';
+import { WeeklyHabitCard } from '@/components/WeeklyHabitCard';
 import { AddHabitDialog } from '@/components/AddHabitDialog';
 import { useSupabaseHabits } from '@/hooks/useSupabaseHabits';
 import { Habit } from '@/types/habit';
 import { BottomNavigation } from '@/components/BottomNavigation';
+import { CalendarDays } from 'lucide-react';
 
 export default function Home() {
   const { habits, addHabit, updateHabitProgress, decrementHabitProgress, toggleHabitComplete, editHabit, deleteHabit, getTodayProgress, userLevel, totalStreakDays, loading } = useSupabaseHabits();
@@ -20,6 +22,9 @@ export default function Home() {
       </div>
     );
   }
+
+  const dailyHabits = habits.filter(h => h.frequencyType === 'daily');
+  const weeklyHabits = habits.filter(h => h.frequencyType === 'weekly');
   
   const todayProgressData = getTodayProgress();
   const todayProgress = {
@@ -31,13 +36,20 @@ export default function Home() {
   };
   
   // Sort habits: incomplete first, then completed
-  const sortedHabits = [...habits].sort((a, b) => {
+  const sortedDailyHabits = [...dailyHabits].sort((a, b) => {
     if (a.completed === b.completed) return 0;
     return a.completed ? 1 : -1;
   });
 
-  const incompleteHabits = habits.filter(h => !h.completed);
-  const canAddMore = habits.length < 7; // Free tier limit
+  const sortedWeeklyHabits = [...weeklyHabits].sort((a, b) => {
+    const aDone = (a.weeklyCompletions ?? 0) >= a.weeklyTarget;
+    const bDone = (b.weeklyCompletions ?? 0) >= b.weeklyTarget;
+    if (aDone === bDone) return 0;
+    return aDone ? 1 : -1;
+  });
+
+  const incompleteHabits = dailyHabits.filter(h => !h.completed);
+  const canAddMore = habits.length < 7;
 
   return (
     <div className="min-h-screen p-4 pb-20">
@@ -64,20 +76,41 @@ export default function Home() {
           </div>
         )}
 
-        {/* Habits List */}
-        <div className="space-y-3">
-          {sortedHabits.map((habit) => (
-            <HabitCard
-              key={habit.id}
-              habit={habit}
-              onToggle={toggleHabitComplete}
-              onDelete={deleteHabit}
-              onIncrement={updateHabitProgress}
-              onDecrement={decrementHabitProgress}
-              onEdit={setEditingHabit}
-            />
-          ))}
-        </div>
+        {/* Daily Habits List */}
+        {sortedDailyHabits.length > 0 && (
+          <div className="space-y-3">
+            {sortedDailyHabits.map((habit) => (
+              <HabitCard
+                key={habit.id}
+                habit={habit}
+                onToggle={toggleHabitComplete}
+                onDelete={deleteHabit}
+                onIncrement={updateHabitProgress}
+                onDecrement={decrementHabitProgress}
+                onEdit={setEditingHabit}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Weekly Habits Section */}
+        {sortedWeeklyHabits.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 pt-2">
+              <CalendarDays className="h-5 w-5 text-secondary" />
+              <h2 className="text-lg font-semibold">Weekly Habits</h2>
+            </div>
+            {sortedWeeklyHabits.map((habit) => (
+              <WeeklyHabitCard
+                key={habit.id}
+                habit={habit}
+                onToggle={toggleHabitComplete}
+                onDelete={deleteHabit}
+                onEdit={setEditingHabit}
+              />
+            ))}
+          </div>
+        )}
 
         {/* Add Habit Button */}
         {habits.length === 0 ? (

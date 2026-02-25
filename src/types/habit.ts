@@ -10,6 +10,9 @@ export interface Habit {
   createdAt: string;
   category?: string;
   color?: string;
+  frequencyType: 'daily' | 'weekly';
+  weeklyTarget: number;
+  weeklyCompletions?: number;
 }
 
 export interface User {
