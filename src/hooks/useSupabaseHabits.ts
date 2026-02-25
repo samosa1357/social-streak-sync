@@ -453,15 +453,18 @@ export function useSupabaseHabits() {
       setDailyProgress(updatedDailyProgress);
       
       // Update local habit state
-      setHabits(prev => prev.map(h => 
-        h.id === id 
-          ? { 
-              ...h, 
-              currentCount: newProgress,
-              completed: isNowCompleted
-            }
-          : h
-      ));
+      setHabits(prev => prev.map(h => {
+        if (h.id !== id) return h;
+        const weeklyDelta = h.frequencyType === 'weekly'
+          ? (isNowCompleted && !wasCompleted ? 1 : !isNowCompleted && wasCompleted ? -1 : 0)
+          : 0;
+        return {
+          ...h,
+          currentCount: newProgress,
+          completed: isNowCompleted,
+          weeklyCompletions: Math.max(0, (h.weeklyCompletions ?? 0) + weeklyDelta),
+        };
+      }));
       
       // Check and update streaks
       await checkAndUpdateStreaks(updatedDailyProgress, id, wasCompleted, isNowCompleted);
