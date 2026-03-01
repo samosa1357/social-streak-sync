@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Settings, Moon, Sun, Star, Users, LogOut, Lock, ChevronRight, Loader2, Check, X, Edit2 } from 'lucide-react';
+import { User, Settings, Moon, Sun, Star, Users, LogOut, Lock, ChevronRight, Loader2, Check, X, Edit2, Trash2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { ProfilePhotoUpload } from '@/components/ProfilePhotoUpload';
 import { RequireUsername } from '@/components/RequireUsername';
+import { DeleteAccountDialog } from '@/components/DeleteAccountDialog';
 import { z } from 'zod';
 
 const usernameSchema = z.string()
@@ -38,6 +39,7 @@ function ProfileContent() {
   const [isUsernameAvailable, setIsUsernameAvailable] = useState<boolean | null>(null);
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [isSavingUsername, setIsSavingUsername] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -420,15 +422,26 @@ function ProfileContent() {
                 <div className="text-sm text-muted-foreground mb-2">
                   Signed in as: {user.email}
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSignOut}
-                  className="transition-smooth text-destructive hover:text-destructive"
-                >
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Sign Out
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSignOut}
+                    className="transition-smooth text-destructive hover:text-destructive"
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Sign Out
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setShowDeleteDialog(true)}
+                    className="transition-smooth"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Account
+                  </Button>
+                </div>
               </div>
             )}
           </div>
@@ -501,6 +514,7 @@ function ProfileContent() {
           </div>
         </Card>
       </div>
+      <DeleteAccountDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog} />
       <BottomNavigation />
     </div>
   );
