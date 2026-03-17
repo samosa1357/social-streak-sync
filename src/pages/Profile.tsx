@@ -451,14 +451,14 @@ function ProfileContent() {
         {/* Premium Upgrade */}
         <Card className="p-4 gradient-secondary border-0 shadow-medium">
           <div className="text-center">
-            <h3 className="font-semibold text-white mb-2">Upgrade to Premium</h3>
-            <p className="text-sm text-white/90 mb-4">
+            <h3 className="font-semibold text-foreground mb-2">Upgrade to Premium</h3>
+            <p className="text-sm text-muted-foreground mb-4">
               Unlock unlimited habits and advanced features
             </p>
             
             <div className="space-y-2 mb-4">
               {getPremiumFeatures().map((feature, index) => (
-                <div key={index} className="text-left text-sm text-white/90 flex items-center">
+                <div key={index} className="text-left text-sm text-muted-foreground flex items-center">
                   <Star className="h-3 w-3 mr-2 text-warning" />
                   {feature}
                 </div>
