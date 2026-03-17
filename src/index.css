@@ -4,23 +4,23 @@
 
 @layer base {
   :root {
-    --background: 216 30% 96%;
-    --foreground: 216 50% 12%;
+    --background: 216 40% 95%;
+    --foreground: 216 50% 20%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 216 50% 12%;
+    --card: 216 30% 97%;
+    --card-foreground: 216 50% 20%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 216 50% 12%;
+    --popover: 216 30% 97%;
+    --popover-foreground: 216 50% 20%;
 
     --primary: 210 56% 46%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 216 25% 91%;
-    --secondary-foreground: 216 50% 15%;
+    --secondary-foreground: 216 50% 22%;
 
     --muted: 216 20% 93%;
-    --muted-foreground: 216 15% 42%;
+    --muted-foreground: 216 30% 38%;
 
     --accent: 210 56% 46%;
     --accent-foreground: 0 0% 100%;
@@ -42,8 +42,8 @@
 
     --gradient-primary: linear-gradient(135deg, hsl(210 56% 46%), hsl(210 56% 58%));
     --gradient-secondary: linear-gradient(135deg, hsl(216 25% 88%), hsl(216 25% 93%));
-    --gradient-background: linear-gradient(180deg, hsl(216 30% 96%), hsl(216 25% 93%));
-    --gradient-card: linear-gradient(135deg, hsl(0 0% 100% / 0.98), hsl(216 20% 97% / 0.95));
+    --gradient-background: linear-gradient(180deg, hsl(216 40% 95%), hsl(216 30% 92%));
+    --gradient-card: linear-gradient(135deg, hsl(216 30% 97% / 0.98), hsl(216 25% 95% / 0.95));
 
     --shadow-soft: 0 2px 8px hsl(216 30% 30% / 0.08);
     --shadow-medium: 0 4px 16px hsl(216 30% 30% / 0.12);
@@ -52,12 +52,12 @@
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 216 50% 12%;
+    --sidebar-background: 216 30% 97%;
+    --sidebar-foreground: 216 50% 20%;
     --sidebar-primary: 210 56% 46%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 216 25% 93%;
-    --sidebar-accent-foreground: 216 50% 12%;
+    --sidebar-accent-foreground: 216 50% 20%;
     --sidebar-border: 216 20% 84%;
     --sidebar-ring: 210 56% 46%;
   }
